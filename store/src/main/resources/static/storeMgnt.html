@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>ezdelivery.com</title>
+    <link rel="stylesheet" href="./css/common.css">
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+    <script type="text/javascript">
+
+jQuery(document).ready(function() {
+
+    $("#btnClose").click(function() {
+        window.close();
+    });
+
+    $("#btnAdd").click(function() {
+        addMenu();
+    });
+
+    function addMenu() {
+        var data = {};
+
+        data['storeName']= $("#storeName").val();
+        data['host']= $("#host").val();
+        data['storeAddress']= $("#storeAddress").val();
+        data['menuName'] = $("#menuName").val();
+		data['price']   = $("#price").val();        
+        data['status'] = $("#status").val();
+
+        $.ajax({
+            type: "POST",
+            contentType: "application/json",
+            dataType: 'json',
+            url: "/stores",
+            data: JSON.stringify(data),
+            success: function(result){
+                console.log(result);
+
+                alert("상점 등록 완료");
+                window.opener.location.reload();
+                window.close();
+            },
+
+            error: function (status) {
+                alert("상점 등록 실패:"+status);
+                //window.opener.location.reload();
+                //window.close();
+             }
+        })
+    }
+
+});
+    </script>
+
+</head>
+<body>
+
+<div class="popup-wrap">
+    <div class="contents-area">
+        <h2 class="title">상점(메뉴)등록</h2>
+        <div class="title-line"></div>
+
+        <table class="Table">
+            <tbody>
+                <tr>
+                    <th>상점명</th>
+                    <td><input class="Textinput" type="text" id="storeName"></td>
+                </tr>
+                <tr>
+                    <th>점주</th>
+                    <td><input class="Textinput" type="text" id="host"></td>
+                </tr>
+                <tr>
+                    <th>상점주소</th>
+                    <td><input class="Textinput" type="text" id="storeAddress"></td>
+                </tr>
+                <tr>
+                    <th>메뉴명</th>
+                    <td><input class="Textinput" type="text" id="menuName"></td>
+                </tr>
+                <tr>
+                    <th>가격</th>
+                    <td><input class="Textinput" type="text" id="price"></td>
+                </tr>
+                <tr>
+                    <th>상태</th>
+                    <td><input class="Textinput" type="text" id="status" value="판매중"></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="btn-wrap">
+            <div class="btn-left">
+            </div>
+            <div class="btn-right">
+                <button class="Button bg-red" id="btnAdd">등록</button>
+                <button class="Button bg-gray" id="btnClose">취소</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>

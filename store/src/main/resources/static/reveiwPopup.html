@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>ezdelivery.com</title>
+    <link rel="stylesheet" href="./css/common.css">
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+    <script type="text/javascript">
+
+    jQuery(document).ready(function(){
+        loadReviews();
+
+        $("#btnReviews").click(function() {
+            loadReviews();
+        });
+    });
+
+    function loadReviews() {
+        $('#tblReviews tbody').empty();
+
+        var scoreId = location.href.substr(
+            location.href.lastIndexOf('?') + 1
+        );
+		
+        $.ajax({
+            type: "GET",
+            contentType: "application/json",
+            dataType: 'json',
+            url: "/reviews/"+scoreId,
+			//url:"http://localhost:8085/html/reviews/1",
+			
+            success: function(result){
+                console.log(result);
+                
+				var reviews = result.data;
+
+                if(reviews.length < 1 ){
+                    $('#tblReviews > tbody:last-child')
+                        .append($('<tr>').attr('style', 'text-align:center;')
+                            .append($('<td>').attr('colspan', '5').text('NO DATA'))
+                        );
+                }
+                else {
+                    for(var i=0; i<reviews.length; i++){
+                        var review = reviews[i];
+                        //var reviewhref = review._links.review.href;
+
+                        //var tmp = reviewhref.split("/");
+                        //var reviewId = tmp[tmp.length-1];
+
+                        $('#tblReviews > tbody:last-child')
+                            .append($('<tr>').attr('style', 'text-align:center;')
+                                .append($('<td>').text(review.id))
+                                .append($('<td>').text(review.guestName))
+                                .append($('<td>').text(review.score))
+                                .append($('<td>').text(review.reviewContents))
+                                .append($('<td>').text(review.reviewDateTime))
+
+                            );
+                    }
+                }
+				
+            },
+            error: function (status) {
+                $('#tblReviews > tbody:last-child')
+                    .append($('<tr>').attr('style', 'text-align:center; color:red;')
+                        .append($('<td>').attr('colspan', '9').text('조회 실패'))
+                    );
+             }
+        });
+    }
+
+    </script>
+
+</head>
+<body>
+
+<div class="popup-wrap">
+    <div class="contents-area">
+        <h2 class="title">리뷰보기</h2>
+        <div class="title-line"></div>
+
+		<table class="Table" id="tblReviews">
+			<thead>
+			<tr>
+				<th>ID</th>
+				<th>주문자</th>
+				<th>점수</th>
+				<th width="350">내용</th>
+				<th>작성일자</th>
+			</tr>
+			</thead>
+			<tbody>
+			</tbody>
+		</table>
+
+
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>ezdelivery.com(리뷰작성)</title>
+    <link rel="stylesheet" href="./css/common.css">
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+    <script type="text/javascript">
+
+jQuery(document).ready(function(){
+
+    loadOrdeInfo();
+
+    $("#btnClose").click(function() {
+        window.close();
+    });
+
+    $("#btnReview").click(function() {
+        addReview();
+    });
+
+    function loadOrdeInfo() {
+        var orderId = location.href.substr(
+            location.href.lastIndexOf('?') + 1
+        );
+
+        $.ajax({
+            type: "GET",
+            contentType: "application/json",
+            dataType: 'json',
+            url: "/orders/" + orderId,
+            //data: JSON.stringify(data),
+            success: function(result){
+                console.log(result);
+
+                $("#orderId").val(orderId);
+                $("#orderDateTime").val(result.orderDateTime);
+                $("#guestName").val(result.guestName);
+                $("#storeName").val(result.storeName);
+                $("#storeId").val(result.storeId);
+                $("#menuName").val(result.menuName);
+
+            },
+
+            error: function (status) {
+                alert("주문정보 실패. " + status);
+                //window.close();
+             }
+        });
+    }
+
+    function addReview() {
+        var data = {};
+
+        data['orderId']   = $("#orderId").val();
+        data['storeId']   = $("#storeId").val();
+        data['orderDateTime']  = $("#orderDateTime").val();
+        data['menuName']     = $("#menuName").val();
+        data['storeName']     = $("#storeName").val();
+        data['guestName']    = $("#guestName").val();
+
+        data['score']   = $("#score").val();
+        data['reviewContents']  = $("#reviewContents").val();
+        data['reviewDateTime']= getCurrentDate();
+
+        $.ajax({
+            type: "POST",
+            contentType: "application/json",
+            dataType: 'json',
+            url: "/reviews",
+            data: JSON.stringify(data),
+            success: function(result){
+                console.log(result);
+
+                alert("리뷰 등록 완료");
+                window.opener.location.reload();
+                window.close();
+            },
+
+            error: function (status) {
+                //alert('fail' + status);
+                alert("리뷰 등록 실패");
+                window.opener.location.reload();
+                window.close();
+             }
+        });
+    }
+
+    function getCurrentDate()
+    {
+        var date = new Date();
+        var year = date.getFullYear().toString();
+
+        var month = date.getMonth() + 1;
+        month = month < 10 ? '0' + month.toString() : month.toString();
+
+        var day = date.getDate();
+        day = day < 10 ? '0' + day.toString() : day.toString();
+
+        return year + month + day ;
+    }
+
+});
+    </script>
+
+</head>
+<body>
+
+<div class="popup-wrap">
+    <div class="contents-area">
+        <h2 class="title">리뷰 작성하기</h2>
+        <div class="title-line"></div>
+
+        <table class="Table">
+            <tbody>
+                <tr>
+                    <th>주문ID</th>
+                    <td><input class="Textinput" type="text" id="orderId" readonly></td>
+                </tr>
+                <tr>
+                    <th>주문일자</th>
+                    <td><input class="Textinput" type="text" id="orderDateTime" readonly></td>
+                </tr>
+                <tr>
+                    <th>주문자</th>
+                    <td><input class="Textinput" type="text" id="guestName" readonly></td>
+                </tr>
+                <tr>
+                    <th>상점명</th>
+                    <td>
+                        <input class="Textinput" type="text" id="storeName" readonly>
+                    <td><input  type="hidden" id="storeId" >                    
+                    </td>
+                </tr>                
+                <tr>
+                    <th>메뉴이름</th>
+                    <td><input class="Textinput" type="text" id="menuName" readonly></td>
+                </tr>
+                <tr>
+                    <th>리뷰 점수</th>
+                    <td><input class="Textinput" type="text" id="score"></td>
+                </tr>
+                <tr>
+                    <th>리뷰 내용</th>
+                    <td><input class="Textinput" type="text" id="reviewContents"></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="btn-wrap">
+            <div class="btn-left">
+            </div>
+            <div class="btn-right">
+                <button class="Button bg-red" id="btnReview">등록</button>
+                <button class="Button bg-gray" id="btnClose">취소</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>

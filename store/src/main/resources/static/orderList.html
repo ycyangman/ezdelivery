@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>ezdelivery.com</title>
+    <link rel="stylesheet" href="./css/common.css">
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+    <script type="text/javascript">
+
+    jQuery(document).ready(function(){
+        searchOrders();
+
+        $("#btnBookings").click(function() {
+            searchOrders();
+        });
+    });
+
+    function searchOrders() {
+        $('#mainlList tbody').empty();
+
+        $.ajax({
+            type: "GET",
+            contentType: "application/json",
+            dataType: 'json',
+            url: "/orders",
+            success: function(result){
+                console.log(result);
+                //var totalcnt = result.page.totalElements;
+                var orders = result._embedded.orders;
+
+                if(orders.length < 1 ){
+                    $('#mainlList > tbody:last-child')
+                        .append($('<tr>').attr('style', 'text-align:center;')
+                            .append($('<td>').attr('colspan', '10').text('NO DATA'))
+                        );
+                }
+                else {
+                    for(var i=0; i<orders.length; i++){
+                        var order = orders[i];
+                        var oderHref = order._links.order.href;
+
+                        var tmp = oderHref.split("/");
+                        var orderId = tmp[tmp.length-1];
+
+                        $('#mainlList > tbody:last-child')
+                            .append($('<tr>').attr('style', 'text-align:center;')
+                                .append($('<td>').text(orderId))
+                                .append($('<td>').text(order.orderDateTime))
+                                .append($('<td>').text(order.guestName))
+                                .append($('<td>').text(order.storeName))
+                                .append($('<td>').text(order.menuName + ""))
+                                .append($('<td>').text(order.price))
+                                .append($('<td>').text(order.orderNumber))
+                                .append($('<td>').text(order.guestAddress))
+                                .append($('<td>').text(order.status))
+                                .append($('<td>').append($('<a>').attr({class: 'Button bg-red', href: "javascript:deleteOrder('"+orderId+"')"}).text('취소하기')))
+                            );
+                    }
+                }
+            },
+            error: function (status) {
+                $('#mainlList > tbody:last-child')
+                    .append($('<tr>').attr('style', 'text-align:center; color:red;')
+                        .append($('<td>').attr('colspan', '10').text('조회 실패'+status))
+                    );
+             }
+        });
+    }
+
+    function deleteOrder(orderId) {
+        if(!confirm("주문취소 하시겠습니까?")){
+            return;
+        }
+
+        var data = {};
+
+        data['bizDvn']   = "PATCH";
+        data['orderId'] = orderId;
+        data['status'] = "주문취소";
+
+        $.ajax({
+            /* 삭제시
+            type: "DELETE",
+            url: "/orders/"+orderId,
+            */
+            contentType: "application/json",
+            dataType: 'json',
+            
+            type: "POST",
+            url: "/orders/order.do",
+            data: JSON.stringify(data),
+            
+            //data: JSON.stringify(data),
+            success: function(result){
+                console.log(result);
+
+                alert("주문 취소 완료");
+                window.location.reload();
+            },
+
+            error: function (status) {
+                //alert('fail' + status);
+                alert("주문 취소 실패");
+                window.location.reload();
+             }
+        });
+    }
+    </script>
+
+</head>
+<body>
+
+<div class="wrap">
+    <div class="header">
+        <a href="index.html"><h1 class="logo">ezdelivery.com</h1></a>
+        <nav>
+            <ul class="topmenu">
+                <li><a href="storeList.html">상점관리</a></li>
+                <li class="selected"><a href="orderList.html">주문현황</a></li>
+                <li><a href="paymentList.html">결제내역</a></li>
+                <li><a href="mypages.html">마이페이지</a></li>
+                <li><a href="alarms.html">알림보기</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <div class="container">
+        <div class="contents-wrap">
+            <div class="contents-box">
+                <div class="contents-area">
+                    <h2 class="title">주문현황</h2>
+                    <div class="title-line"></div>
+
+                    <div class="btn-wrap">
+                        <div class="btn-left">
+
+                        </div>
+                        <div class="btn-right">
+                            <button class="Button bg-gray" id="btnBookings">새로고침</button>
+                        </div>
+                    </div>
+
+                    <table class="Table" id="mainlList">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>주문일자</th>
+                            <th>주문자명</th>
+                            <th>상정명</th>
+                            <th>메뉴</th>
+                            <th>가격</th>
+                            <th>주문수량</th>
+                            <th>배달주소</th>
+                            <th>상태</th>
+                            <th>비고</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

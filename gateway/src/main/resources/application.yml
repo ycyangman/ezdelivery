@@ -1,0 +1,104 @@
+server:
+  port: 8080
+
+---
+
+spring:
+  profiles: default
+  cloud:
+    gateway:
+      routes:
+        - id: store
+          uri: http://localhost:8081
+          predicates:
+            - Path=/stores/**
+        - id: order
+          uri: http://localhost:8082
+          predicates:
+            - Path=/orders/** 
+        - id: payment
+          uri: http://localhost:8083
+          predicates:
+            - Path=/payments/** 
+        - id: alarm
+          uri: http://localhost:8084
+          predicates:
+            - Path=/msgs/** 
+        - id: mypage
+          uri: http://localhost:8085
+          predicates:
+            - Path=/reviews/**, /mypages/**
+        - id: delivery
+          uri: http://localhost:8086
+          predicates:
+            - Path=/deliveries/** 
+#html 경로는 root path로 맨 나중에 위치함
+        - id: html
+          uri: http://localhost:8081
+          predicates:
+            - Path=/**
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "*"
+            allowedMethods:
+              - "*"
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+
+
+---
+
+spring:
+  profiles: docker
+  cloud:
+    gateway:
+      routes:
+        - id: store
+          uri: http://store:8080
+          predicates:
+            - Path=/stores/**
+        - id: html
+          uri: http://html:8080
+          predicates:
+            - Path=/**
+        - id: order
+          uri: http://order:8080
+          predicates:
+            - Path=/orders/** 
+        - id: payment
+          uri: http://payment:8080
+          predicates:
+            - Path=/payments/** 
+        - id: alarm
+          uri: http://alarm:8080
+          predicates:
+            - Path=/msgs/** 
+        - id: mypage
+          uri: http://mypage:8080
+          predicates:
+            - Path=/reviews/** /mypages/**
+        - id: delivery
+          uri: http://delivery:8080
+          predicates:
+            - Path=/deliveries/** 
+#html 경로는 root path로 맨 나중에 위치함
+        - id: html
+          uri: http://html:8080
+          predicates:
+            - Path=/**
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "*"
+            allowedMethods:
+              - "*"
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+
+server:
+  port: 8080

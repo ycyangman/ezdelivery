@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>ezdelivery.com</title>
+    <link rel="stylesheet" href="./css/common.css">
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+    <script type="text/javascript">
+
+    jQuery(document).ready(function(){
+        loadAlarms();
+
+        $("#btnAlarms").click(function() {
+            loadAlarms();
+        });
+    });
+
+    function loadAlarms() {
+        $('#tblAlarms tbody').empty();
+
+        $.ajax({
+            type: "GET",
+            contentType: "application/json",
+            dataType: 'json',
+            url: "/msgs",
+            success: function(result){
+                console.log(result);
+                var alarms = result._embedded.msgs;
+
+                if(alarms.length < 1 ){
+                    $('#tblAlarms > tbody:last-child')
+                        .append($('<tr>').attr('style', 'text-align:center;')
+                            .append($('<td>').attr('colspan', '3').text('NO DATA'))
+                        );
+                }
+                else {
+                    for(var i=0; i<alarms.length; i++){
+                        var alarm = alarms[i];
+                        var alarmhref = alarm._links.msg.href;
+
+                        var tmp = alarmhref.split("/");
+                        var alarmId = tmp[tmp.length-1];
+
+                        $('#tblAlarms > tbody:last-child')
+                            .append($('<tr>').attr('style', 'text-align:center;')
+                                .append($('<td>').text(alarmId))
+                                .append($('<td>').text(alarm.receiver))
+                                .append($("<td style='text-align:left;'>").text(alarm.message))
+                            );
+                    }
+                }
+            },
+            error: function (status) {
+                $('#tblAlarms > tbody:last-child')
+                    .append($('<tr>').attr('style', 'text-align:center; color:red;')
+                        .append($('<td>').attr('colspan', '3').text('조회 실패'))
+                    );
+             }
+        });
+    }
+
+    </script>
+
+</head>
+<body>
+
+<div class="wrap">
+    <div class="header">
+        <a href="index.html"><h1 class="logo">ezdelivery.com</h1></a>
+        <nav>
+            <ul class="topmenu">
+                <li><a href="storeList.html">상점관리</a></li>
+                <li><a href="orderList.html">주문현황</a></li>
+                <li><a href="paymentList.html">결제내역</a></li>
+                <li><a href="mypages.html">마이페이지</a></li>
+                <li class="selected"><a href="alarms.html">알림보기</a></li>
+
+            </ul>
+        </nav>
+    </div>
+
+    <div class="container">
+        <div class="contents-wrap">
+            <div class="contents-box">
+                <div class="contents-area">
+                    <h2 class="title">알림이력</h2>
+                    <div class="title-line"></div>
+
+                    <div class="btn-wrap">
+                        <div class="btn-left">
+
+                        </div>
+                        <div class="btn-right">
+                            <button class="Button bg-gray" id="btnAlarms">새로고침</button>
+                        </div>
+                    </div>
+
+                    <table class="Table" id="tblAlarms">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>수신자</th>
+                            <th>메시지</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

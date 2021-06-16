@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>ezdelivery.com</title>
+    <link rel="stylesheet" href="./css/common.css">
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+    <script type="text/javascript">
+
+jQuery(document).ready(function(){
+
+    loadMenu();
+
+    $("#btnClose").click(function() {
+        window.close();
+    });
+
+    $("#btnOrder").click(function() {
+        addOrder();
+    });
+
+    function loadMenu() {
+        var storeId = location.href.substr(
+            location.href.lastIndexOf('?') + 1
+        );
+        //alert("storeId:" + storeId);
+
+        $.ajax({
+            type: "GET",
+            contentType: "application/json",
+            dataType: 'json',
+            url: "/stores/" + storeId,
+            //data: JSON.stringify(data),
+            success: function(result){
+                console.log(result);
+
+                $("#storeId").val(storeId);
+				$("#storeName").val(result.storeName);				
+                $("#host").val(result.host);
+                $("#menuName").val(result.menuName);
+                $("#price").val(result.price);
+
+            },
+
+            error: function (status) {
+                alert("메뉴정보 조회 실패!! " + status);
+                //window.close();
+             }
+        });
+    }
+
+    function addOrder() {
+        var data = {};
+
+        data['storeId']   = $("#storeId").val();
+		data['storeName'] = $("#storeName").val();
+        data['host'] = $("#host").val();
+        data['menuName'] = $("#menuName").val();
+        data['price']    = $("#price").val();
+        data['guestAddress']  = $("#guestAddress").val();
+        data['status']   = '주문됨';
+        data['guestName']= $("#guestName").val();
+		data['orderNumber']= $("#orderNumber").val();
+        data['orderDateTime']= getCurrentDate();
+
+        $.ajax({
+            type: "POST",
+            contentType: "application/json",
+            dataType: 'json',
+            url: "/orders",
+            data: JSON.stringify(data),
+            success: function(result){
+                console.log(result);
+
+                alert("주문 완료");
+                window.opener.location.reload();
+                window.close();
+            },
+
+            error: function (status) {
+                alert('주문 실패' + status);
+                
+                //window.opener.location.reload();
+                //window.close();
+             }
+        });
+    }
+
+    function getCurrentDate()
+    {
+        var date = new Date();
+        var year = date.getFullYear().toString();
+
+        var month = date.getMonth() + 1;
+        month = month < 10 ? '0' + month.toString() : month.toString();
+
+        var day = date.getDate();
+        day = day < 10 ? '0' + day.toString() : day.toString();
+
+        return year + month + day ;
+    }
+
+});
+    </script>
+
+</head>
+<body>
+
+<div class="popup-wrap">
+    <div class="contents-area">
+        <h2 class="title">주문하기</h2>
+        <div class="title-line"></div>
+
+        <table class="Table">
+            <tbody>
+                <tr>
+                    <th>ID</th>
+                    <td><input class="Textinput" type="text" id="storeId" readonly></td>
+                </tr>
+                <tr>
+                    <th>상호명</th>
+                    <td><input class="Textinput" type="text" id="storeName" readonly></td>
+                </tr>
+                <tr>
+                    <th>점주</th>
+                    <td><input class="Textinput" type="text" id="host" readonly></td>
+                </tr>	
+                <tr>
+                    <th>메뉴</th>
+                    <td><input class="Textinput" type="text" id="menuName" readonly></td>
+                </tr>
+                <tr>
+                    <th>가격</th>
+                    <td><input class="Textinput" type="text" id="price" readonly></td>
+                </tr>
+                <tr>
+                    <th>주문자명</th>
+                    <td><input class="Textinput" type="text" id="guestName"></td>
+                </tr>
+                <tr>
+                    <th>주소</th>
+                    <td><input class="Textinput" type="text" id="guestAddress"></td>
+                </tr>
+                <tr>
+                    <th>수량</th>
+                    <td><input class="Textinput" type="text" id="orderNumber" maxlength="3"></td>
+                </tr>
+                <tr>
+            </tbody>
+        </table>
+
+        <div class="btn-wrap">
+            <div class="btn-left">
+            </div>
+            <div class="btn-right">
+                <button class="Button bg-red" id="btnOrder">주문</button>
+                <button class="Button bg-gray" id="btnClose">취소</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+<!--
+<span class="_9qqdp4" style="font-size: 12px;"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="presentation" focusable="false" style="display: block; height: 12px; width: 12px; fill: currentcolor;"><path d="M15.094 1.579l-4.124 8.885-9.86 1.27a1 1 0 0 0-.542 1.736l7.293 6.565-1.965 9.852a1 1 0 0 0 1.483 1.061L16 25.951l8.625 4.997a1 1 0 0 0 1.482-1.06l-1.965-9.853 7.293-6.565a1 1 0 0 0-.541-1.735l-9.86-1.271-4.127-8.885a1 1 0 0 0-1.814 0z" fill-rule="evenodd"></path></svg></span>
+-->
+</body>
+</html>
