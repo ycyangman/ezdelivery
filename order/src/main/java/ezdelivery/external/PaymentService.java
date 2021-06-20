@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 //api.url.payment ==> http://localhost:8083
-@FeignClient(name="pay", url="http://localhost:8083")
+@FeignClient(name="pay", url="${api.url.payment}")
 public interface PaymentService {
 
     @RequestMapping(method= RequestMethod.GET, path="/payments")

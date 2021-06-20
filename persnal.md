@@ -1,0 +1,154 @@
+# 환경구성
+
+* EKS Cluster create
+```
+$ eksctl create cluster --name skccuer10-Cluster --version 1.15 --nodegroup-name standard-workers --node-type t3.medium --nodes 3 --nodes-min 1 --nodes-max 4
+```
+
+* EKS Cluster settings
+```
+$ aws eks --region ap-northeast-2 update-kubeconfig --name skccuer10-Cluster
+$ kubectl config current-context
+$ kubectl get all
+```
+
+* ECR 인증
+```
+$ aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com
+```
+
+* Metric Server 설치
+```
+$ kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.6/components.yaml
+$ kubectl get deployment metrics-server -n kube-system
+```
+
+* Kafka install (kubernetes/helm)
+```
+$ curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get | bash
+$ kubectl --namespace kube-system create sa tiller      
+$ kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
+$ helm init --service-account tiller
+$ kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
+$ helm repo add incubator http://storage.googleapis.com/kubernetes-charts-incubator
+$ helm repo update
+$ helm install --name my-kafka --namespace kafka incubator/kafka
+$ kubectl get all -n kafka
+```
+
+* Istio 설치
+```
+$ curl -L https://git.io/getLatestIstio | ISTIO_VERSION=1.4.5 sh -
+$ cd istio-1.4.5
+$ export PATH=$PWD/bin:$PATH
+$ for i in install/kubernetes/helm/istio-init/files/crd*yaml; do kubectl apply -f $i; done
+$ kubectl apply -f install/kubernetes/istio-demo.yaml
+$ kubectl get pod -n istio-system
+```
+
+* Kiali 설정
+```
+$ kubectl edit service/kiali -n istio-system
+
+- type 변경 : ClusterIP -> LoadBalancer
+- (접속주소) http://http://ac5885beaca174095bad6d5f5779a443-1156063200.ap-northeast-2.elb.amazonaws.com:20001/kiali
+```
+
+* Namespace 생성
+```
+$ kubectl create namespace ezdelivery
+```
+
+* Namespace istio enabled
+```
+$ kubectl label namespace ezdelivery istio-injection=enabled 
+
+- (설정해제 : kubectl label namespace ezdelivery istio-injection=disabled --overwrite)
+```
+
+* siege deploy
+```
+cd ezdelivery/yaml
+kubectl apply -f siege.yaml 
+kubectl exec -it siege -n ezdelivery -- /bin/bash
+apt-get update
+apt-get install httpie
+```
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: siege
+  namespace: ezdelivery
+spec:
+  containers:
+    - name: siege
+      image: apexacme/siege-nginx
+```
+# Build & Deploy
+
+* ECR image repository
+```
+$ aws ecr create-repository --repository-name user08-ezdelivery-gateway --region ap-northeast-2
+$ aws ecr create-repository --repository-name user08-ezdelivery-store --region ap-northeast-2
+$ aws ecr create-repository --repository-name user08-ezdelivery-order --region ap-northeast-2
+$ aws ecr create-repository --repository-name user08-ezdelivery-payment --region ap-northeast-2
+$ aws ecr create-repository --repository-name user08-ezdelivery-mypage --region ap-northeast-2
+$ aws ecr create-repository --repository-name user08-ezdelivery-alarm --region ap-northeast-2
+$ aws ecr create-repository --repository-name user08-ezdelivery-delivery --region ap-northeast-2
+$ aws ecr create-repository --repository-name user08-ezdelivery-commission --region ap-northeast-2
+```
+
+* image build & push
+```
+$ cd gateway
+$ mvn package
+$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-gateway:latest .
+$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-gateway:latest
+
+$ cd ../store
+$ mvn package
+$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-store:latest .
+$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-store:latest
+
+$ cd ../order
+$ mvn package
+$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-order:latest .
+$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-order:latest
+
+$ cd ../payment
+$ mvn package
+$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-payment:latest .
+$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-payment:latest
+
+$ cd ../mypage
+$ mvn package
+$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-mypage:latest .
+$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-mypage:latest
+
+$ cd ../delivery
+$ mvn package
+$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-delivery:latest .
+$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-delivery:latest
+
+$ cd ../alarm
+$ mvn package
+$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-alarm:latest .
+$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-alarm:latest
+
+```
+
+* Deploy
+```
+$ kubectl apply -f siege.yaml
+$ kubectl apply -f configmap.yaml
+$ kubectl apply -f gateway.yaml
+$ kubectl apply -f store.yaml
+$ kubectl apply -f order.yaml
+$ kubectl apply -f payment.yaml
+$ kubectl apply -f mypage.yaml
+$ kubectl apply -f delivery.yaml
+$ kubectl apply -f alarm.yaml
+
+```

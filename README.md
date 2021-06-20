@@ -1,11 +1,9 @@
-"# ezdelivery" 
+## ezdelivery
 
 ![image](https://user-images.githubusercontent.com/487999/79708354-29074a80-82fa-11ea-80df-0db3962fb453.png)
 
-# 예제 - 음식배달
+본 프로젝트는 MSA/DDD/Event Storming/EDA 를 포괄하는 분석/설계/구현/운영 전단계를 커버하고 배달서비스 쉽게 따라하기 입니다.
 
-본 예제는 MSA/DDD/Event Storming/EDA 를 포괄하는 분석/설계/구현/운영 전단계를 커버하도록 구성한 예제입니다.
-이는 클라우드 네이티브 애플리케이션의 개발에 요구되는 체크포인트들을 통과하기 위한 예시 답안을 포함합니다.
 - 체크포인트 : https://workflowy.com/s/assessment-check-po/T5YrzcMewfo4J6LW
 
 
@@ -126,6 +124,7 @@
 
 
 ### 이벤트 도출
+ 우선 시간의 흐름에 따라 비지니스의 상태 변경(생성,변경,삭제 등)을 의미하는 도메인 이벤트를 도출한다
 ![이벤트도출](https://user-images.githubusercontent.com/84304227/122169306-3a28f880-ceb8-11eb-9cea-173e118f755f.PNG)
 
 ### 부적격 이벤트 탈락
@@ -135,12 +134,18 @@
         - 주문시>메뉴가 선택됨, 주문확인됨, 결제버튼이 클릭됨, 상점에 주문정보전달됨, 주문정보조회됨 :  UI 의 이벤트, 업무적인 의미의 이벤트가 아니라서 제외
 
 ### 액터, 커맨드 부착하여 읽기 좋게
+- 엑터는 사람이나 조직이 될 수 있는데 역할 관점으로 도출한다. 엑터는 추상적으로 식별하지 말고 비지니스를 수행하는 구체적인 역할로 고려하여 도출한다. 
+- 이벤트를 트리거하는(발생시키는) 커맨드를 도출한다. 커맨드는 동사 형태가 된다.
+
 ![액터 컴맨드읽기좋게](https://user-images.githubusercontent.com/84304227/122169788-c3402f80-ceb8-11eb-9515-38d8570d54af.PNG)
 
 ### 어그리게잇으로 묶기
+어그리게잇은 커맨드와 이벤트가 영향을 주는 데이터 요소이다.
+명사형이고 노란색 포스트잇에 작성하여 커맨드와 이벤트 사이의 상단에 겹쳐서 붙인다.
+
 ![어그릿게잇으로묶기](https://user-images.githubusercontent.com/84304227/122169817-ce935b00-ceb8-11eb-9838-d380eced6dd6.PNG)
 
-    - app의 Order, store 의 주문처리, 결제의 결제이력은 그와 연결된 command 와 event 들에 의하여 트랜잭션이 유지되어야 하는 단위로 그들 끼리 묶어줌
+- app의 Order, store 의 주문처리, 결제의 결제이력은 그와 연결된 command 와 event 들에 의하여 트랜잭션이 유지되어야 하는 단위로 그들 끼리 묶어줌
 
 ### 바운디드 컨텍스트로 묶기
 
@@ -152,10 +157,13 @@
         - General Domain:   pay : 결제서비스로 3rd Party 외부 서비스를 사용하는 것이 경쟁력이 높음 (핑크색으로 이후 전환할 예정)
 
 ### 폴리시 부착 (괄호는 수행주체, 폴리시 부착을 둘째단계에서 해놔도 상관 없음. 전체 연계가 초기에 드러남)
+정책은 이벤트 뒤에 따라오는 반응 적인 비지니스 로직이며 어디인가에 존재하는 커맨드를 트리거 한다.
 
 ![폴리시부착](https://user-images.githubusercontent.com/84304227/122169969-013d5380-ceb9-11eb-891f-fe44c4663788.PNG)
 
 ### 폴리시의 이동과 컨텍스트 매핑 (점선은 Pub/Sub, 실선은 Req/Resp)
+
+비동기 호출은 커맨드가 수행주체의 폴리시로 이동
 
 ![폴리시의 이동과 컨텍스트 매핑](https://user-images.githubusercontent.com/84304227/122169980-04d0da80-ceb9-11eb-8372-977ba017b83a.PNG)
 
@@ -197,18 +205,22 @@
         - 결제 완료시 점주연결 및 배송처리:  App(front) 에서 Store 마이크로서비스로 주문요청이 전달되는 과정에 있어서 Store 마이크로 서비스가 별도의 배포주기를 가지기 때문에 Eventual Consistency 방식으로 트랜잭션 처리함.
         - 나머지 모든 inter-microservice 트랜잭션: 주문상태, 배달상태 등 모든 이벤트에 대해 카톡을 처리하는 등, 데이터 일관성의 시점이 크리티컬하지 않은 모든 경우가 대부분이라 판단, Eventual Consistency 를 기본으로 채택함.
 
+### 최종 모델링
 
-
+![최종소스기반모델링](https://user-images.githubusercontent.com/84304227/122336179-635c8e00-cf77-11eb-9b4b-98c6b672c650.PNG)
 
 ## 헥사고날 아키텍처 다이어그램 도출
     
-![image](https://user-images.githubusercontent.com/487999/79684772-eba9ab00-826e-11ea-9405-17e2bf39ec76.png)
+![헥사고날아키텍처_new](https://user-images.githubusercontent.com/84304227/122347692-4464f880-cf85-11eb-8567-c58a622aa929.png)
 
 
     - Chris Richardson, MSA Patterns 참고하여 Inbound adaptor와 Outbound adaptor를 구분함
     - 호출관계에서 PubSub 과 Req/Resp 를 구분함
     - 서브 도메인과 바운디드 컨텍스트의 분리:  각 팀의 KPI 별로 아래와 같이 관심 구현 스토리를 나눠가짐
 
+## 이벤트스토밍 구현 기술연동
+
+![이벤트스토밍구현기술연동](https://user-images.githubusercontent.com/84304227/122505402-3ec7eb00-d037-11eb-9d12-f03875dd68ad.PNG)
 
 # 구현:
 
@@ -228,9 +240,149 @@ cd customer
 python policy-handler.py 
 ```
 
-## DDD 의 적용
+## CQRS
+CQRS는 Command and Query Responsibility Segregation(명령과 조회의 책임 분리)을 나타냅니다.
 
-- 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언하였다: (예시는 payment 마이크로 서비스). 이때 가능한 현업에서 사용하는 언어 (유비쿼터스 랭귀지)를 그대로 사용하려고 노력했다. 하지만, 일부 구현에 있어서 영문이 아닌 경우는 실행이 불가능한 경우가 있기 때문에 계속 사용할 방법은 아닌것 같다. (Maven pom.xml, Kafka의 topic id, FeignClient 의 서비스 id 등은 한글로 식별자를 사용하는 경우 오류가 발생하는 것을 확인하였다)
+리뷰 및 주문/결재/배달 등  Status 에 대하여 점주 및 고객이 조회 할 수 있도록 CQRS 로 구현하였다.
+
+```
+@Service
+public class MypageViewHandler {
+
+
+    @Autowired
+    private MypageRepository mypageRepository;
+
+    //-----------------------------------------------------
+    // 주문되었을 때
+    //-----------------------------------------------------
+    @StreamListener(KafkaProcessor.INPUT)
+    public void whenOrdered_then_CREATE_1 (@Payload Ordered ordered) ;
+
+    //-----------------------------------------------------
+    // 주문취소되었을 때
+    //-----------------------------------------------------
+    @StreamListener(KafkaProcessor.INPUT)
+        public void whenOrderCanceled_then_UPDATE_1(@Payload OrderCanceled orderCanceled) {
+        try {
+
+            if (!orderCanceled.validate()) return;
+
+            System.out.println("\n\n##### listener whenOrderCanceled_then_UPDATE_1 : " + orderCanceled.toJson() + "\n\n");
+
+            List<Mypage> mypageList = mypageRepository.findByOrderId(orderCanceled.getId());
+            for(Mypage mypage : mypageList){
+                // view 객체에 이벤트의 eventDirectValue 를 set 함
+
+                if(StringUtils.isEmpty(orderCanceled.getStatus())) {
+                    orderCanceled.setStatus("주문취소");
+                }
+                 mypage.setStatus(orderCanceled.getStatus());
+
+                mypageRepository.save(mypage);
+            }
+
+
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    //-----------------------------------------------------
+    // 배달시작되었을 때 --구현내용 상위 참조
+    //-----------------------------------------------------
+    @StreamListener(KafkaProcessor.INPUT)
+    public void whenDeliveryStarted_then_CREATE_3 (@Payload DeliveryStarted deliveryStarted) ;
+
+
+    //-----------------------------------------------------
+    // 결재취소되었을 때 --구현내용 상위 참조
+    //-----------------------------------------------------
+    @StreamListener(KafkaProcessor.INPUT)
+    public void whenPayCanceled_then_UPDATE_2(@Payload PayCanceled payCanceled);
+
+}
+```
+## API 게이트웨이
+1. gateway 스프링부트 App을 추가 후 application.yaml내에 각 마이크로 서비스의 routes 를 추가하고 gateway 서버의 포트를 8080 으로 설정함
+- application.yaml 예시
+
+```
+spring:
+  profiles: docker
+  cloud:
+    gateway:
+      routes:
+        - id: store
+          uri: http://store:8080
+          predicates:
+            - Path=/stores/**
+        - id: html
+          uri: http://html:8080
+          predicates:
+            - Path=/**
+        - id: order
+          uri: http://order:8080
+          predicates:
+            - Path=/orders/** 
+        - id: payment
+          uri: http://payment:8080
+          predicates:
+            - Path=/payments/** 
+        - id: alarm
+          uri: http://alarm:8080
+          predicates:
+            - Path=/msgs/** 
+        - id: mypage
+          uri: http://mypage:8080
+          predicates:
+            - Path=/reviews/** /mypages/**
+        - id: delivery
+          uri: http://delivery:8080
+          predicates:
+            - Path=/deliveries/** 
+#html 경로는 root path로 맨 나중에 위치함
+        - id: html
+          uri: http://html:8080
+          predicates:
+            - Path=/**
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "*"
+            allowedMethods:
+              - "*"
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+
+server:
+  port: 8080
+```
+
+## Correlation
+프로젝트에서는 PolicyHandler에서 처리 시 어떤 건에 대한 처리인지를 구별하기 위한 Correlation-key 구현을 이벤트 클래스 안의 변수로 전달받아 서비스간 연관된 처리를 정확하게 구현하고 있습니다.
+
+각각의 MSA 서비스는 자신이 보유한 서비스내 Local 트랜잭션을 관리하며, 트랜잭션이 종료되면 완료 Event를 발행합니다. 
+만약 그 다음에 수행되어야할 트랜잭션이 있다면,  해당 트랜잭션을 수행해야하는 App에서 완료 Event를 수신받고 다음 작업을 처리합니다. 
+이때 Event는 Kafka와 같은 메시지 큐를 이용해서 비동기 방식으로 전달한다.
+
+주문을 하면 동시에 연관된 주문(Order), 결제(Payment) 등의 서비스의 상태가 적당하게 변경이 되고,
+주문을 취소하면 다시 연관된 Strore, 주문, 결제(Payment) 등의 서비스의 상태값 등의 데이터가 변경되는 것을 확인할 수 있습니다.
+
+
+
+## DDD(Domain-Driven Design) 의 적용
+도메인 모델은 특정 비지니스 맥락에서 통용되는 개념들의 관계를 잘 정의한 모형이다.
+도메인 모델을 보면 각 도메인 모델과 다른 도메인 모델간의 경계가 보인다. 
+여기서 사용하는 언어와 저곳에서 상용하는 언어와 개념이 상이하는 이 경계가 도메인의 경계, 컨텍스트 경계(Bounded Context)이다.
+Bounded Context내의 도메인 주요개념을 표현하기 위해 도메인내에 공통으로 사용하는 언어가 유비쿼터스언어이다.
+같은 컨텍스트내의 이해관계자가 사용하는 언어를 개발소스에도 사용해야 하나 아래의 이유로 영문구성을 하였다.
+
+- 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언하였다: (예시는 payment 마이크로 서비스). 
+- 이때 가능한 현업에서 사용하는 언어 (유비쿼터스 랭귀지)를 그대로 사용하려고 노력했다. 
+- 하지만, 일부 구현에 있어서 영문이 아닌 경우는 실행이 불가능한 경우가 있기 때문에 계속 사용할 방법은 아닌것 같다. (Maven pom.xml, Kafka의 topic id, FeignClient 의 서비스 id 등은 한글로 식별자를 사용하는 경우 오류가 발생하는 것을 확인하였다)
 
 ```
 package ezdelivery;
@@ -603,27 +755,236 @@ http localhost:8080/orders     # 모든 주문의 상태가 "배송됨"으로 �
 
 # 운영
 
+# 환경구성
+
+* EKS Cluster create
+```
+$ eksctl create cluster --name skccuer10-Cluster --version 1.15 --nodegroup-name standard-workers --node-type t3.medium --nodes 3 --nodes-min 1 --nodes-max 4
+```
+
+* EKS Cluster settings
+```
+$ aws eks --region ap-northeast-2 update-kubeconfig --name skccuer10-Cluster
+$ kubectl config current-context
+$ kubectl get all
+```
+
+* ECR 인증
+```
+$ aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com
+```
+
+* Metric Server 설치
+```
+$ kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.6/components.yaml
+$ kubectl get deployment metrics-server -n kube-system
+```
+
+* Kafka install (kubernetes/helm)
+```
+$ curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get | bash
+$ kubectl --namespace kube-system create sa tiller      
+$ kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
+$ helm init --service-account tiller
+$ kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
+$ helm repo add incubator http://storage.googleapis.com/kubernetes-charts-incubator
+$ helm repo update
+$ helm install --name my-kafka --namespace kafka incubator/kafka
+$ kubectl get all -n kafka
+```
+
+* Istio 설치
+```
+$ curl -L https://git.io/getLatestIstio | ISTIO_VERSION=1.4.5 sh -
+$ cd istio-1.4.5
+$ export PATH=$PWD/bin:$PATH
+$ for i in install/kubernetes/helm/istio-init/files/crd*yaml; do kubectl apply -f $i; done
+$ kubectl apply -f install/kubernetes/istio-demo.yaml
+$ kubectl get pod -n istio-system
+```
+
+* Kiali 설정
+```
+$ kubectl edit service/kiali -n istio-system
+
+- type 변경 : ClusterIP -> LoadBalancer
+- (접속주소) http://http://ac5885beaca174095bad6d5f5779a443-1156063200.ap-northeast-2.elb.amazonaws.com:20001/kiali
+```
+
+* Namespace 생성
+```
+$ kubectl create namespace ezdelivery
+```
+
+* Namespace istio enabled
+```
+$ kubectl label namespace ezdelivery istio-injection=enabled 
+
+- (설정해제 : kubectl label namespace ezdelivery istio-injection=disabled --overwrite)
+```
+
+* siege deploy
+```
+cd ezdelivery/yaml
+kubectl apply -f siege.yaml 
+kubectl exec -it siege -n ezdelivery -- /bin/bash
+apt-get update
+apt-get install httpie
+```
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: siege
+  namespace: ezdelivery
+spec:
+  containers:
+    - name: siege
+      image: apexacme/siege-nginx
+```
+# Build & Deploy
+
+* ECR image repository
+```
+$ aws ecr create-repository --repository-name user08-ezdelivery-gateway --region ap-northeast-2
+$ aws ecr create-repository --repository-name user08-ezdelivery-store --region ap-northeast-2
+$ aws ecr create-repository --repository-name user08-ezdelivery-order --region ap-northeast-2
+$ aws ecr create-repository --repository-name user08-ezdelivery-payment --region ap-northeast-2
+$ aws ecr create-repository --repository-name user08-ezdelivery-mypage --region ap-northeast-2
+$ aws ecr create-repository --repository-name user08-ezdelivery-alarm --region ap-northeast-2
+$ aws ecr create-repository --repository-name user08-ezdelivery-delivery --region ap-northeast-2
+
+```
+
+* image build & push
+```
+$ cd gateway
+$ mvn package
+$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-gateway:latest .
+$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-gateway:latest
+
+$ cd ../room
+$ mvn package
+$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-stote:latest .
+$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-store:latest
+
+$ cd ../booking
+$ mvn package
+$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-order:latest .
+$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-order:latest
+
+$ cd ../payment
+$ mvn package
+$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-payment:latest .
+$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-payment:latest
+
+$ cd ../mypage
+$ mvn package
+$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-mypage:latest .
+$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-mypage:latest
+
+$ cd ../alarm
+$ mvn package
+$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-alarm:latest .
+$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-alarm:latest
+
+$ cd ../delivery
+$ mvn package
+$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-delivery:latest .
+$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-delivery:latest
+
+$ cd ../commission
+$ mvn package
+$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-commission:latest .
+$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-commission:latest
+```
+
+* Deploy
+```
+$ kubectl apply -f siege.yaml
+$ kubectl apply -f configmap.yaml
+$ kubectl apply -f gateway.yaml
+$ kubectl apply -f store.yaml
+$ kubectl apply -f order.yaml
+$ kubectl apply -f payment.yaml
+$ kubectl apply -f mypage.yaml
+$ kubectl apply -f delivery.yaml
+$ kubectl apply -f alarm.yaml
+
+```
 ## CI/CD 설정
 
+각 구현체들은 github의 각각의 source repository 에 구성
+Image repository는 ECR 사용
 
-각 구현체들은 각자의 source repository 에 구성되었고, 사용한 CI/CD 플랫폼은 GCP를 사용하였으며, pipeline build script 는 각 프로젝트 폴더 이하에 cloudbuild.yml 에 포함되었다.
+각 구현체들은 각자의 source repository 에 구성되었고, 사용한 CI/CD 플랫폼은 GCP를 사용하였으며, 
+pipeline build script 는 각 프로젝트 폴더 이하에 cloudbuild.yml 에 포함되었다.
 
 
 ## 동기식 호출 / 서킷 브레이킹 / 장애격리
 
-* 서킷 브레이킹 프레임워크의 선택: Spring FeignClient + Hystrix 옵션을 사용하여 구현함
+방식1) 서킷 브레이킹 프레임워크의 선택: istio-injection + DestinationRule
 
-시나리오는 단말앱(app)-->결제(pay) 시의 연결을 RESTful Request/Response 로 연동하여 구현이 되어있고, 결제 요청이 과도할 경우 CB 를 통하여 장애격리.
+```
+kubectl get ns -L istio-injection
+kubectl label namespace ezdelivery istio-injection=enabled
+````
+- 예약, 결제 서비스 모두 아무런 변경 없음
+- 부하테스터 siege 툴을 통한 서킷 브레이커 동작 확인:
+- 동시사용자 100명, 60초 동안 실시
+
+```
+kubectl run siege --image=apexacme/siege-nginx -n ezdelivery
+kubectl exec -it siege -c siege -n ezdelivery -- /bin/bash
+siege -c100 -t60S -r10 --content-type "application/json" 'http://order:8080/orders POST {"storeName": "yogiyo"}'
+```
+서킷 브레이킹을 위한 DestinationRule 적용
+
+```
+cd ezdelivery/yaml
+kubectl apply -f dr-pay.yaml
+```
+DestinationRule 적용되어 서킷 브레이킹 동작 확인 (kiali 화면)
+
+
+다시 부하 발생하여 DestinationRule 적용 제거하여 정상 처리 확인
+```
+cd ezdelivery/yaml
+kubectl delete -f dr-pay.yaml
+```
+
+
+방식2) 서킷 브레이킹 프레임워크의 선택: Spring FeignClient + Hystrix 옵션을 사용하여 구현함
+
+시나리오는 주문(order)-->결제(pay) 시의 연결을 RESTful Request/Response 로 연동하여 구현이 되어있고, 결제 요청이 과도할 경우 CB 를 통하여 장애격리.
 
 - Hystrix 를 설정:  요청처리 쓰레드에서 처리시간이 610 밀리가 넘어서기 시작하여 어느정도 유지되면 CB 회로가 닫히도록 (요청을 빠르게 실패처리, 차단) 설정
 ```
-# application.yml
+# order_application.yml
+
+feign:
+  hystrix:
+    enabled: true
 
 hystrix:
   command:
-    # 전역설정
     default:
       execution.isolation.thread.timeoutInMilliseconds: 610
+      
+kubectl apply -f order_cb.yaml
+```
+
+
+```
+
+cd ezdelivery/yaml
+kubectl apply -f dr-pay.yaml
+
+istio-injection 활성화 및 pod container 확인
+kubectl get ns -L istio-injection
+kubectl label namespace ezdelivery istio-injection=enabled 
+
 
 ```
 
@@ -644,12 +1005,16 @@ hystrix:
     }
 ```
 
+istio-injection 적용 (기 적용완료)
+```
+kubectl label namespace mybnb istio-injection=enabled
+```
 * 부하테스터 siege 툴을 통한 서킷 브레이커 동작 확인:
 - 동시사용자 100명
 - 60초 동안 실시
 
 ```
-$ siege -c100 -t60S -r10 --content-type "application/json" 'http://localhost:8081/orders POST {"item": "chicken"}'
+$ siege -c100 -t60S -r10 --content-type "application/json" 'http://order:8080/orders POST {"storeName": "yogiyo"}'
 
 ** SIEGE 4.0.5
 ** Preparing 100 concurrent users for battle.
@@ -787,18 +1152,40 @@ Shortest transaction:	        0.00
 ### 오토스케일 아웃
 앞서 CB 는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다. 
 
+- (istio injection 적용한 경우) istio injection 적용 해제
+```
+kubectl label namespace ezdelivery istio-injection=disabled --overwrite
+
+kubectl apply -f order.yaml
+kubectl apply -f payment.yaml
+```
+
+- 결제서비스 배포시 resource 설정 적용되어 있음
+```
+    spec:
+      containers:
+          ...
+          resources:
+            limits:
+              cpu: 500m
+            requests:
+              cpu: 200m
+```
 
 - 결제서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 설정은 CPU 사용량이 15프로를 넘어서면 replica 를 10개까지 늘려준다:
 ```
-kubectl autoscale deploy pay --min=1 --max=10 --cpu-percent=15
+kubectl autoscale deploy payment -n ezdelivery --min=1 --max=10 --cpu-percent=15
+#kubectl autoscale deploy order --min=1 --max=10 --cpu-percent=15
+$ kubectl get deploy auth -n ezdelivery -w 
 ```
 - CB 에서 했던 방식대로 워크로드를 2분 동안 걸어준다.
 ```
-siege -c100 -t120S -r10 --content-type "application/json" 'http://localhost:8081/orders POST {"item": "chicken"}'
+siege -c100 -t120S -r10 --content-type "application/json" 'http://order:8080/orders POST {"storeName": "yogiyo"}'
 ```
 - 오토스케일이 어떻게 되고 있는지 모니터링을 걸어둔다:
 ```
-kubectl get deploy pay -w
+kubectl get deploy order -w -n ezdelivery 
+kubectl get deploy order -w
 ```
 - 어느정도 시간이 흐른 후 (약 30초) 스케일 아웃이 벌어지는 것을 확인할 수 있다:
 ```
@@ -823,11 +1210,11 @@ Concurrency:		       96.02
 
 ## 무정지 재배포
 
-* 먼저 무정지 재배포가 100% 되는 것인지 확인하기 위해서 Autoscaler 이나 CB 설정을 제거함
+* 먼저 무정지 재배포가 100% 되는 것인지 확인하기 위해서 Autoscaler 이나 CB 설정을 제거함(위의 시나리오에서 제거되었음)
 
 - seige 로 배포작업 직전에 워크로드를 모니터링 함.
 ```
-siege -c100 -t120S -r10 --content-type "application/json" 'http://localhost:8081/orders POST {"item": "chicken"}'
+siege -c100 -t120S -r10 --content-type "application/json" 'http://order:8080/orders POST {"storeName": "yogiyo"}'
 
 ** SIEGE 4.0.5
 ** Preparing 100 concurrent users for battle.
@@ -841,9 +1228,9 @@ HTTP/1.1 201     0.70 secs:     207 bytes ==> POST http://localhost:8081/orders
 
 ```
 
-- 새버전으로의 배포 시작
+- # 컨테이너 이미지 Update (readness, liveness 미설정 상태)
 ```
-kubectl set image ...
+- kubectl apply -f order_na.yaml 실행
 ```
 
 - seige 의 화면으로 넘어가서 Availability 가 100% 미만으로 떨어졌는지 확인
@@ -861,10 +1248,9 @@ Concurrency:		       96.02
 배포기간중 Availability 가 평소 100%에서 70% 대로 떨어지는 것을 확인. 원인은 쿠버네티스가 성급하게 새로 올려진 서비스를 READY 상태로 인식하여 서비스 유입을 진행한 것이기 때문. 이를 막기위해 Readiness Probe 를 설정함:
 
 ```
+
 # deployment.yaml 의 readiness probe 의 설정:
-
-
-kubectl apply -f kubernetes/deployment.yaml
+- kubectl apply -f order.yaml 실행
 ```
 
 - 동일한 시나리오로 재배포 한 후 Availability 확인:

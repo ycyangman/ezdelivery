@@ -81,8 +81,8 @@ public class PolicyHandler{
 
         System.out.println("\n\n##### wheneverPayCanceled_SendMsg : " + payCanceled.toJson() + "\n\n");
 
-        String msg =  "orderId:"+payCanceled.getOrderId() + "_" + payCanceled.getStatus();
-       
+        String msg =  "결재취소:"+payCanceled.getOrderId() + ", 상세내역:"  + payCanceled.toString();
+
         if(!StringUtils.isEmpty(payCanceled.getGuestName())) {
             sendMsg(payCanceled.getGuestName(), msg);
         }

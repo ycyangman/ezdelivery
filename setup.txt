@@ -1,5 +1,3 @@
-
-
 ----------------------------------------------------------------
 1). zookeper start
 ----------------------------------------------------------------
@@ -11,6 +9,8 @@ zookeeper-server-start.bat  ../../config/zookeeper.properties
 2). kafka start
 -----------------------------------------------------------------
 kafka-server-start.bat ../../config/server.properties
+
+#kafka-logs, zookeeper 폴더 삭제(안지우면 서버 안뜰때 있음)
 
 ----------------------------------------------------------------
 3). CMD창 가서 이벤트 로그 보기
@@ -95,5 +95,183 @@ PS D:\MSA\workspace\ezdelivery\alarm> mvn spring-boot:run
 
 => 서비스 기동전에 데이터가 없었으나 서비스 기동후 kafka 메시지 처리후  해당 내역이 확인 가능한 상태
 
+----------------------------------------
 
 
+깃허브에 소스 올리기.
+https://github.com/ 깃허브 사이트 가서 repository 생성 (서비스별로 생성)
+
+
+CMD 창 띄워서 명령어 수행.
+해당 소스폴더 위치 가서 (서비스 소스 있는 주소)
+git init(초기화)
+git remote add origin 깃허브URL주소  git remote add origin "https://github.com/ycyangman/ezdelivery.git"
+git remote -v
+git status(상태확인)
+git add *(소스추가:or 파일명)
+git commit -m "0.1"
+git push -u origin master(깃허브에 올림)
+-- ! [rejected]        master -> master (fetch first) 에러 나면 아래 명령어로 강제 push
+git push origin +master
+
+이전 로그인기록 있어서 커밋 안될때(초기화 하고 본인 깃허브 아이디 로그인)
+git config --local credential.helper ""
+git config --global user.name "ycyangman"
+git config --global user.email "ycyangman@gmail.com"
+
+
+
+이미지 생성 및 이미지 AWS에 올리기.
+1. AWS 사이트 가서 ECR - micro service 마다 repository 생성(repository명이 이미지명)
+
+Ubuntu 창 띄워서 명령어 수행.
+폴더 생성(서비스 별로 생성)
+mkdir 서비스명(폴더생성)
+cd 서비스명(생성된 폴더로 들어감)
+git clone 깃허브URL주소(깃허브에 소스 올린거 복사)
+cd 생성된폴더(복사된 폴더로 들어감)
+rm -rf ./target(타겟폴더 초기화)
+mvn package(패키지 생성)
+docker build -t 496278789073.dkr.ecr.us-east-2.amazonaws.com/pej_order:v5 .(이미지 빌드) ex : 이미지경로:버전
+docker images(이미지 생성 확인)
+
+도커 이미지 삭제 할 경우  (기존)
+docker image rm $(docker images -q) # 한번에 모든 도커 이미지 지우기
+
+AWS 로그인
+aws configure
+aws ecr get-login-password --region 본인지역 | docker login --username AWS --password-stdin 496278789073.dkr.ecr.us-east-2.amazonaws.com
+docker push 496278789073.dkr.ecr.us-east-2.amazonaws.com/pej_order:v5(이미지 PUSH) 이미지경로:버전
+AWS에서 이미지 올라간거 확인
+
+
+
+서비스 띄우기.
+컨테이너 만들기
+eksctl create cluster --name 팀명-sk-Cluster --version 1.15 --nodegroup-name standard-workers --node-type t3.medium --nodes 2 --nodes-min 1 --nodes-max 3
+aws eks --region 본인지역 update-kubeconfig --name 팀명-sk-Cluster
+클러스터 생성 확인
+kubectl config current-context
+kubectl get all(확인)
+
+디플로이 하기(디플로이 하면 POD도 자동생성)
+kubectl create deploy delivery --image=496278789073.dkr.ecr.us-east-2.amazonaws.com/pej_delivery:v3(이미지경로:버전)
+디플로이 명 게이트웨이 xml 과 명 똑같아야 함.
+
+kubectl get all(확인)
+kubectl expose deploy delivery  --type=ClusterIP --port=8080(서비스 생성)
+kubectl expose deploy gateway  --type=LoadBalancer --port=8080(서비스 생성)
+
+디플로이 설정한 내역 확인 필요 시
+kubectl get deploy delivery -o yaml(readiness, hpa 설정 확인 시)
+디플로이 설정이 먹히지 않을 시 야물 파일 수정 후 직접 디플로이 한다.
+git clone 후 cd 생성된폴더(복사된 폴더로 들어감)
+vi deployment.yml(직접 디플로이 야물 파일 수정)
+kubectl apply -f deployment.yml(디플로이 야물 파일 기준으로 서비스 디플로이)
+
+삭제 필요 시 삭제 처리
+kubectl delete deploy,service --all
+
+카프카 설치
+curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get | bash
+kubectl --namespace kube-system create sa tiller
+kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
+helm init --service-account tiller
+kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
+helm repo add incubator http://storage.googleapis.com/kubernetes-charts-incubator
+helm repo update
+helm install --name my-kafka --namespace kafka incubator/kafka
+kafka 설치 후 모니터링 - watch kubectl get all -n kafka 
+
+테스트 시
+POD주소확인(node IP로 바꾸고 명령어 수행)
+kubectl get po -o wide
+
+
+운영 서킷브레이크 적용
+
+보내는 서비스(order)
+어플리케이션 야물 파일에 추가
+feign:
+  hystrix:
+    enabled: true
+
+hystrix:
+  command:
+    # 전역설정
+    default:
+      execution.isolation.thread.timeoutInMilliseconds: 610
+
+받는 서비스 타임아웃 설정(delivery)
+실제 자바 소스에 추가(랜덤 줘서 시간 주는 거임)
+        try {
+            Thread.currentThread().sleep((long) (400 + Math.random() * 220));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+
+
+부하테스트 준비
+
+1.[UBUNTU] seige 설치
+sudo apt-get update -y
+sudo apt-get install -y siege
+
+2.[UBUNTU] 로드 테스트 툴(siege) 배포(아래그냥 복붙해서 수행)
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: siege
+spec:
+  containers:
+  - name: siege
+    image: apexacme/siege-nginx
+EOF
+
+3.[UBUNTU] siege POD안에서 실행하는 법
+kubectl exec -it siege -- /bin/bash(POD안에 들어가기)
+root@siege:/# siege -c10 -t50S -r10 --content-type "application/json" 'http://order:8080/orders/1 PATCH {"status": "CANCLED"}' -v
+
+
+오토스케일 아웃(HPA)
+
+- Metric Server 설치
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.6/components.yaml
+kubectl get deployment metrics-server -n kube-system
+
+샘플 HPA 생성
+kubectl apply -f https://k8s.io/examples/application/php-apache.yaml
+kubectl autoscale deployment php-apache --cpu-percent=20 --min=1 --max=10
+kubectl get hpa(생성 확인)
+: unknown  안나와야 함 그래야 정상 시간 좀 걸림
+kubectl top nodes(명령어 확인)
+: 명령이 먹어야 함 먹히면 정상
+
+-우리 deploy에 적용하기
+kubectl autoscale deploy delivery --min=1 --max=10 --cpu-percent=15
+- resource limit 설정 : 디플로이 야물에 세팅(컨테이너명 아래? 위치에 있어야함 기억이 정확이 안남)
+        resources:
+          limits:
+            cpu: 500m
+          requests:
+            cpu: 200m
+
+
+
+무정지재배포(부하 테스트 중 이미지 변경)
+
+1.readinessProbe 설정을 넣었다 뺏다 하면서 증명 => 부하가 걸리던 쪽에...(디플로이 야물에 있음)
+          readinessProbe:
+            httpGet:
+              path: '/actuator/health'
+              port: 8080
+            initialDelaySeconds: 10
+            timeoutSeconds: 2
+            periodSeconds: 5
+            failureThreshold: 10
+
+부하테스트 중
+디플로이 이미지 변경 시(컨테이너명 kubectl get deploy delivery -o yaml 수행 후 확인 가능)
+kubectl set image deploy delivery 컨테이너명=496278789073.dkr.ecr.us-east-2.amazonaws.com/pej_order:v4(이미지경로:버전)
