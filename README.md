@@ -226,20 +226,152 @@
 
 분석/설계 단계에서 도출된 헥사고날 아키텍처에 따라, 각 BC별로 대변되는 마이크로 서비스들을 스프링부트와 파이선으로 구현하였다. 구현한 각 서비스를 로컬에서 실행하는 방법은 아래와 같다 (각자의 포트넘버는 8081 ~ 808n 이다)
 
-```
-cd app
-mvn spring-boot:run
+# eks cluster 생성
+$ eksctl create cluster --name user05ssb --version 1.17 --nodegroup-name standard-workers --node-type t3.medium --nodes 4 --nodes-min 1 --nodes-max 4
 
-cd pay
-mvn spring-boot:run 
+# eks cluster 설정
+aws eks --region ap-northeast-2 update-kubeconfig --name user05ssb
+kubectl config current-context
 
-cd store
-mvn spring-boot:run  
+# metric server 설치
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.6/components.yaml
 
-cd customer
-python policy-handler.py 
-```
+# kafka 설치
+helm install --name my-kafka --namespace kafka incubator/kafka
 
+# istio 설치
+kubectl apply -f install/kubernetes/istio-demo.yaml
+
+# kiali service type 변경
+kubectl edit service/kiali -n istio-system
+(ClusterIP -> LoadBalancer)
+
+# ezdelivery namespace 생성
+kubectl create namespace ezdelivery
+
+# mybnb istio injection 설정
+kubectl label namespace mybnb istio-injection=enabled
+
+# mybnb image build & push
+$ cd ezdelivery
+$ cd gateway
+$ rm -rf target
+$ mvn package
+$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-gateway:latest .
+$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-gateway:latest
+
+$ cd ../store
+$ rm -rf target
+$ mvn package
+$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-store:latest .
+$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-store:latest
+
+$ cd ../order
+$ rm -rf target
+$ mvn package
+$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-order:latest .
+$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-order:latest
+
+$ cd ../payment
+$ rm -rf target
+$ mvn package
+$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-payment:latest .
+$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-payment:latest
+
+$ cd ../mypage
+$ rm -rf target
+$ mvn package
+$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-mypage:latest .
+$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-mypage:latest
+
+$ cd ../alarm
+$ rm -rf target
+$ mvn package
+$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-alarm:latest .
+$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-alarm:latest
+
+$ cd ../delivery
+$ rm -rf target
+$ mvn package
+$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-delivery:latest .
+$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-delivery:latest
+
+# ezdelivery deploy
+cd ezdelivery/yaml
+$ kubectl apply -f siege.yaml
+$ kubectl apply -f configmap.yaml
+$ kubectl apply -f gateway.yaml
+$ kubectl apply -f store.yaml
+$ kubectl apply -f order.yaml
+$ kubectl apply -f payment.yaml
+$ kubectl apply -f mypage.yaml
+$ kubectl apply -f delivery.yaml
+$ kubectl apply -f alarm.yaml
+
+# ezdelivery gateway service type 변경
+$ kubectl edit service/gateway -n mybnb
+(ClusterIP -> LoadBalancer)
+
+현황
+$ kubectl get ns
+NAME              STATUS   AGE
+default           Active   12h
+ezdelivery        Active   11h
+istio-system      Active   11h
+kafka             Active   11h
+kube-node-lease   Active   12h
+kube-public       Active   12h
+kube-system       Active   12h
+
+$ kubectl describe ns ezdelivery
+Name:         ezdelivery
+Labels:       istio-injection=enabled
+Annotations:  <none>
+Status:       Active
+
+No resource quota.
+
+No LimitRange resource.
+  
+
+$ kubectl get all -n ezdelivery
+NAME                            READY   STATUS    RESTARTS   AGE
+pod/alarm-c8889cb8c-wvbpf       2/2     Running   0          4h13m
+pod/delivery-695b86f4d7-tjwn7   2/2     Running   0          168m
+pod/gateway-75744d64c9-9pd96    2/2     Running   0          95m
+pod/mypage-85757d849d-7mw9v     2/2     Running   0          133m
+pod/order-69b7cc6bf4-dms5r      2/2     Running   0          30m
+pod/payment-57f7cc657f-vw9vz    2/2     Running   0          4h57m
+pod/siege                       1/1     Running   0          8h
+pod/store-7986b6c9db-smcwz      1/1     Running   0          8h
+
+NAME               TYPE           CLUSTER-IP       EXTERNAL-IP                                                                  PORT(S)          AGE
+service/alarm      ClusterIP      10.100.203.217   <none>                                                                       8080/TCP         4h13m
+service/delivery   ClusterIP      10.100.195.214   <none>                                                                       8080/TCP         168m
+service/gateway    LoadBalancer   10.100.217.245   afaa345f3143649e4aa9fdf6a7196098-11992356.eu-central-1.elb.amazonaws.com     8080:32240/TCP   95m
+service/mypage     ClusterIP      10.100.227.33    <none>                                                                       8080/TCP         133m
+service/order      ClusterIP      10.100.27.43     <none>                                                                       8080/TCP         30m
+service/payment    ClusterIP      10.100.170.105   <none>                                                                       8080/TCP         4h57m
+service/store      LoadBalancer   10.100.72.169    a8246f41e86b64ea9932f056caa8c02c-1581443906.eu-central-1.elb.amazonaws.com   8080:31800/TCP   8h
+
+NAME                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/alarm      1/1     1            1           4h13m
+deployment.apps/delivery   1/1     1            1           168m
+deployment.apps/gateway    1/1     1            1           95m
+deployment.apps/mypage     1/1     1            1           133m
+deployment.apps/order      1/1     1            1           30m
+deployment.apps/payment    1/1     1            1           4h57m
+deployment.apps/store      1/1     1            1           8h
+
+NAME                                  DESIRED   CURRENT   READY   AGE
+replicaset.apps/alarm-c8889cb8c       1         1         1       4h13m
+replicaset.apps/delivery-695b86f4d7   1         1         1       168m
+replicaset.apps/gateway-75744d64c9    1         1         1       95m
+replicaset.apps/mypage-85757d849d     1         1         1       133m
+replicaset.apps/order-69b7cc6bf4      1         1         1       30m
+replicaset.apps/payment-57f7cc657f    1         1         1       4h57m
+replicaset.apps/store-7986b6c9db      1         1         1       8h
+  
 ## CQRS
 CQRS는 Command and Query Responsibility Segregation(명령과 조회의 책임 분리)을 나타냅니다.
 
@@ -303,6 +435,9 @@ public class MypageViewHandler {
 
 }
 ```
+
+![CQRS](https://user-images.githubusercontent.com/84304227/122797773-cabd6980-d2fa-11eb-8f7b-180ad3ce057b.PNG)
+  
 ## API 게이트웨이
 1. gateway 스프링부트 App을 추가 후 application.yaml내에 각 마이크로 서비스의 routes 를 추가하고 gateway 서버의 포트를 8080 으로 설정함
 - application.yaml 예시
@@ -336,16 +471,11 @@ spring:
         - id: mypage
           uri: http://mypage:8080
           predicates:
-            - Path=/reviews/** /mypages/**
+            - Path=/reviews/**, /mypages/**
         - id: delivery
           uri: http://delivery:8080
           predicates:
             - Path=/deliveries/** 
-#html 경로는 root path로 맨 나중에 위치함
-        - id: html
-          uri: http://html:8080
-          predicates:
-            - Path=/**
       globalcors:
         corsConfigurations:
           '[/**]':
@@ -361,7 +491,7 @@ server:
   port: 8080
 ```
 
-## Correlation
+## Correlation(SAGA)
 프로젝트에서는 PolicyHandler에서 처리 시 어떤 건에 대한 처리인지를 구별하기 위한 Correlation-key 구현을 이벤트 클래스 안의 변수로 전달받아 서비스간 연관된 처리를 정확하게 구현하고 있습니다.
 
 각각의 MSA 서비스는 자신이 보유한 서비스내 Local 트랜잭션을 관리하며, 트랜잭션이 종료되면 완료 Event를 발행합니다. 
@@ -371,6 +501,10 @@ server:
 주문을 하면 동시에 연관된 주문(Order), 결제(Payment) 등의 서비스의 상태가 적당하게 변경이 되고,
 주문을 취소하면 다시 연관된 Strore, 주문, 결제(Payment) 등의 서비스의 상태값 등의 데이터가 변경되는 것을 확인할 수 있습니다.
 
+  ![safa_주문현황](https://user-images.githubusercontent.com/84304227/122799334-8f239f00-d2fc-11eb-9dcf-292fa8487269.PNG)
+  
+  ![결재현황](https://user-images.githubusercontent.com/84304227/122799356-96e34380-d2fc-11eb-898a-e20d05bceab5.PNG)
+  
 
 
 ## DDD(Domain-Driven Design) 의 적용
@@ -520,8 +654,10 @@ http localhost:8080/orders/1
 
 ## 폴리글랏 퍼시스턴스
 
-앱프런트 (app) 는 서비스 특성상 많은 사용자의 유입과 상품 정보의 다양한 콘텐츠를 저장해야 하는 특징으로 인해 RDB 보다는 Document DB / NoSQL 계열의 데이터베이스인 Mongo DB 를 사용하기로 하였다. 이를 위해 order 의 선언에는 @Entity 가 아닌 @Document 로 마킹되었으며, 별다른 작업없이 기존의 Entity Pattern 과 Repository Pattern 적용과 데이터베이스 제품의 설정 (application.yml) 만으로 MongoDB 에 부착시켰다
+각 마이크로서비스의 특성에 따라 데이터 저장소를 RDB, DocumentDB/NoSQL 등 다양하게 사용할 수 있지만, 시간적/환경적 특성상 모두 H2 메모리DB를 적용하였다.
 
+각 마이크로서비스의 특성에 따라 다양한 프로그래밍 언어를 사용하여 구현할 수 있지만, 시간적/환경적 특성상 Java를 이용하여 구현하였다.
+  
 ```
 # Order.java
 
@@ -552,28 +688,6 @@ public interface 주문Repository extends JpaRepository<Order, UUID>{
 
 ```
 
-## 폴리글랏 프로그래밍
-
-고객관리 서비스(customer)의 시나리오인 주문상태, 배달상태 변경에 따라 고객에게 카톡메시지 보내는 기능의 구현 파트는 해당 팀이 python 을 이용하여 구현하기로 하였다. 해당 파이썬 구현체는 각 이벤트를 수신하여 처리하는 Kafka consumer 로 구현되었고 코드는 다음과 같다:
-```
-from flask import Flask
-from redis import Redis, RedisError
-from kafka import KafkaConsumer
-import os
-import socket
-
-
-# To consume latest messages and auto-commit offsets
-consumer = KafkaConsumer('fooddelivery',
-                         group_id='',
-                         bootstrap_servers=['localhost:9092'])
-for message in consumer:
-    print ("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
-                                          message.offset, message.key,
-                                          message.value))
-
-    # 카톡호출 API
-```
 
 파이선 애플리케이션을 컴파일하고 실행하기 위한 도커파일은 아래와 같다 (운영단계에서 할일인가? 아니다 여기 까지가 개발자가 할일이다. Immutable Image):
 ```
@@ -598,8 +712,7 @@ CMD ["python", "policy-handler.py"]
 
 package ezdelivery.external;
 
-//api.url.payment ==> http://localhost:8083
-@FeignClient(name="pay", url="http://localhost:8083")
+@FeignClient(name="payment", url="${api.url.payment}")
 public interface PaymentService {
 
     @RequestMapping(method= RequestMethod.GET, path="/payments")
