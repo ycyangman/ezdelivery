@@ -1095,6 +1095,7 @@ kubectl label namespace ezdelivery istio-injection=enabled
 - 60초 동안 실시
 
 ```
+kubectl exec -it siege -c siege -n ezdelivery -- /bin/bash
 $ siege -c100 -t60S -r10 --content-type "application/json" 'http://order:8080/orders POST {"storeName": "yogiyo"}'
 $siege -c50 -t120S -r10 --content-type "application/json" 'http://order:8080/orders POST {"storeName": "yogiyo", price:1000, orderNumber:2 }'
 ** SIEGE 4.0.5
