@@ -227,32 +227,42 @@
 분석/설계 단계에서 도출된 헥사고날 아키텍처에 따라, 각 BC별로 대변되는 마이크로 서비스들을 스프링부트와 파이선으로 구현하였다. 구현한 각 서비스를 로컬에서 실행하는 방법은 아래와 같다 (각자의 포트넘버는 8081 ~ 808n 이다)
 
 # eks cluster 생성
+```
 $ eksctl create cluster --name user05ssb --version 1.17 --nodegroup-name standard-workers --node-type t3.medium --nodes 4 --nodes-min 1 --nodes-max 4
-
+```
 # eks cluster 설정
+```
 aws eks --region ap-northeast-2 update-kubeconfig --name user05ssb
 kubectl config current-context
-
+```
 # metric server 설치
+```
 kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.6/components.yaml
-
+```
 # kafka 설치
+```
 helm install --name my-kafka --namespace kafka incubator/kafka
-
+```
 # istio 설치
+```
 kubectl apply -f install/kubernetes/istio-demo.yaml
-
+```
 # kiali service type 변경
+```
 kubectl edit service/kiali -n istio-system
 (ClusterIP -> LoadBalancer)
+```
 
 # ezdelivery namespace 생성
+```
 kubectl create namespace ezdelivery
-
-# mybnb istio injection 설정
-kubectl label namespace mybnb istio-injection=enabled
-
-# mybnb image build & push
+```
+# istio injection 설정
+```
+kubectl label namespace ezdelivery istio-injection=enabled
+```
+# image build & push
+```
 $ cd ezdelivery
 $ cd gateway
 $ rm -rf target
@@ -307,12 +317,15 @@ $ kubectl apply -f payment.yaml
 $ kubectl apply -f mypage.yaml
 $ kubectl apply -f delivery.yaml
 $ kubectl apply -f alarm.yaml
-
+```
 # ezdelivery gateway service type 변경
+```
 $ kubectl edit service/gateway -n mybnb
 (ClusterIP -> LoadBalancer)
+```
 
 현황
+```
 $ kubectl get ns
 NAME              STATUS   AGE
 default           Active   12h
@@ -371,6 +384,7 @@ replicaset.apps/mypage-85757d849d     1         1         1       133m
 replicaset.apps/order-69b7cc6bf4      1         1         1       30m
 replicaset.apps/payment-57f7cc657f    1         1         1       4h57m
 replicaset.apps/store-7986b6c9db      1         1         1       8h
+  ```
   
 ## CQRS
 CQRS는 Command and Query Responsibility Segregation(명령과 조회의 책임 분리)을 나타냅니다.
@@ -657,50 +671,6 @@ http localhost:8080/orders/1
 각 마이크로서비스의 특성에 따라 데이터 저장소를 RDB, DocumentDB/NoSQL 등 다양하게 사용할 수 있지만, 시간적/환경적 특성상 모두 H2 메모리DB를 적용하였다.
 
 각 마이크로서비스의 특성에 따라 다양한 프로그래밍 언어를 사용하여 구현할 수 있지만, 시간적/환경적 특성상 Java를 이용하여 구현하였다.
-  
-```
-# Order.java
-
-package fooddelivery;
-
-@Document
-public class Order {
-
-    private String id; // mongo db 적용시엔 id 는 고정값으로 key가 자동 발급되는 필드기 때문에 @Id 나 @GeneratedValue 를 주지 않아도 된다.
-    private String item;
-    private Integer 수량;
-
-}
-
-
-# 주문Repository.java
-package fooddelivery;
-
-public interface 주문Repository extends JpaRepository<Order, UUID>{
-}
-
-# application.yml
-
-  data:
-    mongodb:
-      host: mongodb.default.svc.cluster.local
-    database: mongo-example
-
-```
-
-
-파이선 애플리케이션을 컴파일하고 실행하기 위한 도커파일은 아래와 같다 (운영단계에서 할일인가? 아니다 여기 까지가 개발자가 할일이다. Immutable Image):
-```
-FROM python:2.7-slim
-WORKDIR /app
-ADD . /app
-RUN pip install --trusted-host pypi.python.org -r requirements.txt
-ENV NAME World
-EXPOSE 8090
-CMD ["python", "policy-handler.py"]
-```
-
-
 ## 동기식 호출 과 Fallback 처리
 
 분석단계에서의 조건 중 하나로 주문(app)->결제(pay) 간의 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하기로 하였다. 호출 프로토콜은 이미 앞서 Rest Repository 에 의해 노출되어있는 REST 서비스를 FeignClient 를 이용하여 호출하도록 한다. 
@@ -848,21 +818,22 @@ public class PolicyHandler{
 
 상점 시스템은 주문/결제와 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, 상점시스템이 유지보수로 인해 잠시 내려간 상태라도 주문을 받는데 문제가 없다:
 ```
-# 상점 서비스 (store) 를 잠시 내려놓음 (ctrl+c)
+# 상점 서비스 (mypage) 를 잠시 내려놓음 (ctrl+c)
+
 
 #주문처리
 http localhost:8081/orders item=통닭 storeId=1   #Success
 http localhost:8081/orders item=피자 storeId=2   #Success
 
-#주문상태 확인
+#주문상태 확인(알림보기)
 http localhost:8080/orders     # 주문상태 안바뀜 확인
 
-#상점 서비스 기동
+#상점 서비스(mypage) 기동
 cd 상점
 mvn spring-boot:run
 
 #주문상태 확인
-http localhost:8080/orders     # 모든 주문의 상태가 "배송됨"으로 확인
+http localhost:8080/orders     # 모든 주문의 상태가 
 ```
 
 
