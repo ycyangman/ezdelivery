@@ -1116,7 +1116,8 @@ kubectl label namespace ezdelivery istio-injection=enabled
 
 istio-injection 적용 (기 적용완료)
 ```
-kubectl label namespace mybnb istio-injection=enabled
+kubectl label namespace ezdelivery istio-injection=enabled
+  
 ```
 * 부하테스터 siege 툴을 통한 서킷 브레이커 동작 확인:
 - 동시사용자 100명
@@ -1124,7 +1125,7 @@ kubectl label namespace mybnb istio-injection=enabled
 
 ```
 $ siege -c100 -t60S -r10 --content-type "application/json" 'http://order:8080/orders POST {"storeName": "yogiyo"}'
-
+$siege -c50 -t120S -r10 --content-type "application/json" 'http://order:8080/orders POST {"storeName": "yogiyo", price:1000, orderNumber:2 }'
 ** SIEGE 4.0.5
 ** Preparing 100 concurrent users for battle.
 The server is now under siege...
