@@ -774,8 +774,9 @@ public class Payment {
 
 }
 ```
-- 상점 서비스에서는 결제승인 이벤트에 대해서 이를 수신하여 자신의 정책을 처리하도록 PolicyHandler 를 구현한다:
-
+- ezdelivery 서비스에서는 결제승인 이벤트에 대해서 이를 수신하여 자신의 정책을 처리하도록 PolicyHandler 를 구현한다:
+ 
+ alarm.PolicyHandler
 ```
 package ezdelivery;
 
@@ -783,58 +784,69 @@ package ezdelivery;
 
 @Service
 public class PolicyHandler{
-
     @StreamListener(KafkaProcessor.INPUT)
-    public void whenever결제승인됨_주문정보받음(@Payload 결제승인됨 결제승인됨){
+    public void wheneverOrdered_SendMsg(@Payload Ordered ordered){
 
-        if(결제승인됨.isMe()){
-            System.out.println("##### listener 주문정보받음 : " + 결제승인됨.toJson());
-            // 주문 정보를 받았으니, 요리를 슬슬 시작해야지..
-            
+        if(!ordered.validate()) return;
+
+        System.out.println("\n\n##### wheneverOrdered_SendMsg : " + ordered.toJson() + "\n\n");
+
+
+        String msg =  "주문접수:"+ordered.getId() +", 상세내역:" + ordered.toString();
+
+        if(!StringUtils.isEmpty(ordered.getHost())) {
+            sendMsg(ordered.getHost(), msg);
         }
+        
+        if(!StringUtils.isEmpty(ordered.getGuestName())) {
+            sendMsg(ordered.getGuestName(), msg);
+        }
+            
+    }
+    @StreamListener(KafkaProcessor.INPUT)
+    public void wheneverOrderCanceled_SendMsg(@Payload OrderCanceled orderCanceled){
+
+        if(!orderCanceled.validate()) return;
+
+        System.out.println("\n\n##### wheneverOrderCanceled_SendMsg : " + orderCanceled.toJson() + "\n\n");
+
+        String msg =  "주문취소:"+orderCanceled.getId() +", 상세내역:" + orderCanceled.toString() ;
+
+        if(!StringUtils.isEmpty(orderCanceled.getHost())) {
+            sendMsg(orderCanceled.getHost(), msg);
+        }
+        
+        if(!StringUtils.isEmpty(orderCanceled.getGuestName())) {
+            sendMsg(orderCanceled.getGuestName(), msg);
+        }
+            
     }
 
-}
-
 ```
-실제 구현을 하자면, 카톡 등으로 점주는 노티를 받고, 요리를 마친후, 주문 상태를 UI에 입력할테니, 우선 주문정보를 DB에 받아놓은 후, 이후 처리는 해당 Aggregate 내에서 하면 되겠다.:
+실제 구현을 하자면, 카톡 등으로 점주는 노티를 받고, 요리를 마친후, 주문 상태를 UI에 입력할테니, 
+우선 주문정보를 DB에 받아놓은 후, 이후 처리는 해당 Aggregate 내에서 하면 되겠다.
   
-```
-  @Autowired 주문관리Repository 주문관리Repository;
-  
-  @StreamListener(KafkaProcessor.INPUT)
-  public void whenever결제승인됨_주문정보받음(@Payload 결제승인됨 결제승인됨){
 
-      if(결제승인됨.isMe()){
-          카톡전송(" 주문이 왔어요! : " + 결제승인됨.toString(), 주문.getStoreId());
+상점 시스템은 주문/결제와 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, 상점시스템(상점관리 mypage) 유지보수로 인해 잠시 내려간 상태라도 주문을 받는데 문제가 없다:
 
-          주문관리 주문 = new 주문관리();
-          주문.setId(결제승인됨.getOrderId());
-          주문관리Repository.save(주문);
-      }
-  }
-
-```
-
-상점 시스템은 주문/결제와 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, 상점시스템이 유지보수로 인해 잠시 내려간 상태라도 주문을 받는데 문제가 없다:
-```
 # 상점 서비스 (mypage) 를 잠시 내려놓음 (ctrl+c)
 
+cubectl delete -f mypage.yaml
 
 #주문처리
-http localhost:8081/orders item=통닭 storeId=1   #Success
-http localhost:8081/orders item=피자 storeId=2   #Success
+![주문](https://user-images.githubusercontent.com/84304227/122875622-77393300-d36f-11eb-9650-550362ced758.PNG)
 
 #주문상태 확인(알림보기)
-http localhost:8080/orders     # 주문상태 안바뀜 확인
+http localhost:8080/orders     # 주문내역 알림
+
+![알림이력](https://user-images.githubusercontent.com/84304227/122875107-caf74c80-d36e-11eb-9bc3-4af7799002f9.PNG)
 
 #상점 서비스(mypage) 기동
-cd 상점
-mvn spring-boot:run
+![마이페잊](https://user-images.githubusercontent.com/84304227/122875341-17428c80-d36f-11eb-9b7c-0c4732679d46.PNG)
 
 #주문상태 확인
-http localhost:8080/orders     # 모든 주문의 상태가 
-```
+
+
 
 
 # 운영
@@ -1375,8 +1387,35 @@ Concurrency:		       96.02
 
 - 배포기간 동안 Availability 가 변화없기 때문에 무정지 재배포가 성공한 것으로 확인됨.
 
+#  ConfigMap 사용
+--시스템별로 또는 운영중에 동적으로 변경 가능성이 있는 설정들을 ConfigMap을 사용하여 관리합니다.
 
-
+configmap.yaml
+```
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ezdelivery-config
+  namespace: ezdelivery
+data:
+  api.url.payment: http://paymemt:8080
+  alarm.prefix: Hello
+```
+yaml/order.yaml (configmap 사용)
+```
+      containers:
+        - name: order
+          image: 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-order:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: api.url.payment
+              valueFrom:
+                configMapKeyRef:
+                  name: ezdelivery-config
+                  key: api.url.payment
+```		  
 
 # 신규 개발 조직의 추가
 
