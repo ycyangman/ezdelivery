@@ -224,167 +224,13 @@
 
 # 구현:
 
-분석/설계 단계에서 도출된 헥사고날 아키텍처에 따라, 각 BC별로 대변되는 마이크로 서비스들을 스프링부트와 파이선으로 구현하였다. 구현한 각 서비스를 로컬에서 실행하는 방법은 아래와 같다 (각자의 포트넘버는 8081 ~ 808n 이다)
+분석/설계 단계에서 도출된 헥사고날 아키텍처에 따라, 각 BC별로 대변되는 마이크로 서비스들을 스프링부트와 파이선으로 구현하였다. 
+구현한 각 서비스를 로컬에서 실행하는 방법은 아래와 같다 (각자의 포트넘버는 8081 ~ 808n 이다)
 
-# eks cluster 생성
 ```
-$ eksctl create cluster --name user05ssb --version 1.17 --nodegroup-name standard-workers --node-type t3.medium --nodes 4 --nodes-min 1 --nodes-max 4
-```
-# eks cluster 설정
-```
-aws eks --region ap-northeast-2 update-kubeconfig --name user05ssb
-kubectl config current-context
-```
-# metric server 설치
-```
-kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.6/components.yaml
-```
-# kafka 설치
-```
-helm install --name my-kafka --namespace kafka incubator/kafka
-```
-# istio 설치
-```
-kubectl apply -f install/kubernetes/istio-demo.yaml
-```
-# kiali service type 변경
-```
-kubectl edit service/kiali -n istio-system
-(ClusterIP -> LoadBalancer)
+mvn spring-boot:run
 ```
 
-# ezdelivery namespace 생성
-```
-kubectl create namespace ezdelivery
-```
-# istio injection 설정
-```
-kubectl label namespace ezdelivery istio-injection=enabled
-```
-# image build & push
-```
-$ cd ezdelivery
-$ cd gateway
-$ rm -rf target
-$ mvn package
-$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-gateway:latest .
-$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-gateway:latest
-
-$ cd ../store
-$ rm -rf target
-$ mvn package
-$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-store:latest .
-$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-store:latest
-
-$ cd ../order
-$ rm -rf target
-$ mvn package
-$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-order:latest .
-$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-order:latest
-
-$ cd ../payment
-$ rm -rf target
-$ mvn package
-$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-payment:latest .
-$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-payment:latest
-
-$ cd ../mypage
-$ rm -rf target
-$ mvn package
-$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-mypage:latest .
-$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-mypage:latest
-
-$ cd ../alarm
-$ rm -rf target
-$ mvn package
-$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-alarm:latest .
-$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-alarm:latest
-
-$ cd ../delivery
-$ rm -rf target
-$ mvn package
-$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-delivery:latest .
-$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-delivery:latest
-
-# ezdelivery deploy
-cd ezdelivery/yaml
-$ kubectl apply -f siege.yaml
-$ kubectl apply -f configmap.yaml
-$ kubectl apply -f gateway.yaml
-$ kubectl apply -f store.yaml
-$ kubectl apply -f order.yaml
-$ kubectl apply -f payment.yaml
-$ kubectl apply -f mypage.yaml
-$ kubectl apply -f delivery.yaml
-$ kubectl apply -f alarm.yaml
-```
-# ezdelivery gateway service type 변경
-```
-$ kubectl edit service/gateway -n mybnb
-(ClusterIP -> LoadBalancer)
-```
-
-현황
-```
-$ kubectl get ns
-NAME              STATUS   AGE
-default           Active   12h
-ezdelivery        Active   11h
-istio-system      Active   11h
-kafka             Active   11h
-kube-node-lease   Active   12h
-kube-public       Active   12h
-kube-system       Active   12h
-
-$ kubectl describe ns ezdelivery
-Name:         ezdelivery
-Labels:       istio-injection=enabled
-Annotations:  <none>
-Status:       Active
-
-No resource quota.
-
-No LimitRange resource.
-  
-
-$ kubectl get all -n ezdelivery
-NAME                            READY   STATUS    RESTARTS   AGE
-pod/alarm-c8889cb8c-wvbpf       2/2     Running   0          4h13m
-pod/delivery-695b86f4d7-tjwn7   2/2     Running   0          168m
-pod/gateway-75744d64c9-9pd96    2/2     Running   0          95m
-pod/mypage-85757d849d-7mw9v     2/2     Running   0          133m
-pod/order-69b7cc6bf4-dms5r      2/2     Running   0          30m
-pod/payment-57f7cc657f-vw9vz    2/2     Running   0          4h57m
-pod/siege                       1/1     Running   0          8h
-pod/store-7986b6c9db-smcwz      1/1     Running   0          8h
-
-NAME               TYPE           CLUSTER-IP       EXTERNAL-IP                                                                  PORT(S)          AGE
-service/alarm      ClusterIP      10.100.203.217   <none>                                                                       8080/TCP         4h13m
-service/delivery   ClusterIP      10.100.195.214   <none>                                                                       8080/TCP         168m
-service/gateway    LoadBalancer   10.100.217.245   afaa345f3143649e4aa9fdf6a7196098-11992356.eu-central-1.elb.amazonaws.com     8080:32240/TCP   95m
-service/mypage     ClusterIP      10.100.227.33    <none>                                                                       8080/TCP         133m
-service/order      ClusterIP      10.100.27.43     <none>                                                                       8080/TCP         30m
-service/payment    ClusterIP      10.100.170.105   <none>                                                                       8080/TCP         4h57m
-service/store      LoadBalancer   10.100.72.169    a8246f41e86b64ea9932f056caa8c02c-1581443906.eu-central-1.elb.amazonaws.com   8080:31800/TCP   8h
-
-NAME                       READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/alarm      1/1     1            1           4h13m
-deployment.apps/delivery   1/1     1            1           168m
-deployment.apps/gateway    1/1     1            1           95m
-deployment.apps/mypage     1/1     1            1           133m
-deployment.apps/order      1/1     1            1           30m
-deployment.apps/payment    1/1     1            1           4h57m
-deployment.apps/store      1/1     1            1           8h
-
-NAME                                  DESIRED   CURRENT   READY   AGE
-replicaset.apps/alarm-c8889cb8c       1         1         1       4h13m
-replicaset.apps/delivery-695b86f4d7   1         1         1       168m
-replicaset.apps/gateway-75744d64c9    1         1         1       95m
-replicaset.apps/mypage-85757d849d     1         1         1       133m
-replicaset.apps/order-69b7cc6bf4      1         1         1       30m
-replicaset.apps/payment-57f7cc657f    1         1         1       4h57m
-replicaset.apps/store-7986b6c9db      1         1         1       8h
-  ```
   
 ## CQRS
 CQRS는 Command and Query Responsibility Segregation(명령과 조회의 책임 분리)을 나타냅니다.
@@ -671,6 +517,7 @@ http localhost:8080/orders/1
 각 마이크로서비스의 특성에 따라 데이터 저장소를 RDB, DocumentDB/NoSQL 등 다양하게 사용할 수 있지만, 시간적/환경적 특성상 모두 H2 메모리DB를 적용하였다.
 
 각 마이크로서비스의 특성에 따라 다양한 프로그래밍 언어를 사용하여 구현할 수 있지만, 시간적/환경적 특성상 Java를 이용하여 구현하였다.
+
 ## 동기식 호출 과 Fallback 처리
 
 분석단계에서의 조건 중 하나로 주문(app)->결제(pay) 간의 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하기로 하였다. 호출 프로토콜은 이미 앞서 Rest Repository 에 의해 노출되어있는 REST 서비스를 FeignClient 를 이용하여 호출하도록 한다. 
@@ -855,19 +702,19 @@ http localhost:8080/orders     # 주문내역 알림
 
 * EKS Cluster create
 ```
-$ eksctl create cluster --name skccuer10-Cluster --version 1.15 --nodegroup-name standard-workers --node-type t3.medium --nodes 3 --nodes-min 1 --nodes-max 4
+$ eksctl create cluster --name user05ssb --version 1.17 --nodegroup-name standard-workers --node-type t3.medium --nodes 4 --nodes-min 1 --nodes-max 4
 ```
 
 * EKS Cluster settings
 ```
-$ aws eks --region ap-northeast-2 update-kubeconfig --name skccuer10-Cluster
+$ aws eks --region eu-central-1 update-kubeconfig --name user05ssb
 $ kubectl config current-context
 $ kubectl get all
 ```
 
 * ECR 인증
 ```
-$ aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com
+$ aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin 740569282574.dkr.ecr.eu-central-1.amazonaws.com
 ```
 
 * Metric Server 설치
@@ -943,52 +790,62 @@ spec:
 
 * ECR image repository
 ```
-$ aws ecr create-repository --repository-name user08-ezdelivery-gateway --region ap-northeast-2
-$ aws ecr create-repository --repository-name user08-ezdelivery-store --region ap-northeast-2
-$ aws ecr create-repository --repository-name user08-ezdelivery-order --region ap-northeast-2
-$ aws ecr create-repository --repository-name user08-ezdelivery-payment --region ap-northeast-2
-$ aws ecr create-repository --repository-name user08-ezdelivery-mypage --region ap-northeast-2
-$ aws ecr create-repository --repository-name user08-ezdelivery-alarm --region ap-northeast-2
-$ aws ecr create-repository --repository-name user08-ezdelivery-delivery --region ap-northeast-2
+$ aws ecr create-repository --repository-name user05-ezdelivery-gateway --region eu-central-1
+$ aws ecr create-repository --repository-name user05-ezdelivery-store --region eu-central-1
+$ aws ecr create-repository --repository-name user05-ezdelivery-order --region eu-central-1
+$ aws ecr create-repository --repository-name user05-ezdelivery-payment --region eu-central-1
+$ aws ecr create-repository --repository-name user05-ezdelivery-mypage --region eu-central-1
+$ aws ecr create-repository --repository-name user05-ezdelivery-alarm --region eu-central-1
+$ aws ecr create-repository --repository-name user05-ezdelivery-delivery --region eu-central-1
 
 ```
 
 * image build & push
 ```
 $ cd gateway
+$ rm -rf target
 $ mvn package
-$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-gateway:latest .
-$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-gateway:latest
+$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-gateway:latest .
+$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-gateway:latest
 
 $ cd ../store
+$ rm -rf target
 $ mvn package
-$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-store:latest .
-$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-store:latest
+$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-store:latest .
+$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-store:latest
 
 $ cd ../order
+$ rm -rf target
 $ mvn package
-$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-order:latest .
-$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-order:latest
+$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-order:latest .
+$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-order:latest
+
+$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/ezdelivery-order:cb1 .
+$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/ezdelivery-order:cb1
 
 $ cd ../payment
+$ rm -rf target
 $ mvn package
-$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-payment:latest .
-$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-payment:latest
+$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-payment:latest .
+$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-payment:latest
 
 $ cd ../mypage
+$ rm -rf target
 $ mvn package
-$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-mypage:latest .
-$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-mypage:latest
+$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-mypage:latest .
+$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-mypage:latest
 
 $ cd ../alarm
+$ rm -rf target
 $ mvn package
-$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-alarm:latest .
-$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-alarm:latest
+$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-alarm:latest .
+$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-alarm:latest
 
 $ cd ../delivery
+$ rm -rf target
 $ mvn package
-$ docker build -t 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-delivery:latest .
-$ docker push 052937454741.dkr.ecr.ap-northeast-2.amazonaws.com/user08-ezdelivery-delivery:latest
+$ docker build -t 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-delivery:latest .
+$ docker push 740569282574.dkr.ecr.eu-central-1.amazonaws.com/user05-ezdelivery-delivery:latest
 
 ```
 
@@ -1004,6 +861,75 @@ $ kubectl apply -f mypage.yaml
 $ kubectl apply -f delivery.yaml
 $ kubectl apply -f alarm.yaml
 
+$ kubectl delete -f gateway.yaml
+
+kubectl get svc -n ezdelivery
+kubectl -n ezdelivery get pods
+kubectl get all -n istio-system
+
+kubectl logs order-69b7cc6bf4-xjzr5 -n ezdelivery order
+```
+현황
+```
+$ kubectl get ns
+NAME              STATUS   AGE
+default           Active   12h
+ezdelivery        Active   11h
+istio-system      Active   11h
+kafka             Active   11h
+kube-node-lease   Active   12h
+kube-public       Active   12h
+kube-system       Active   12h
+
+$ kubectl describe ns ezdelivery
+Name:         ezdelivery
+Labels:       istio-injection=enabled
+Annotations:  <none>
+Status:       Active
+
+No resource quota.
+
+No LimitRange resource.
+  
+
+$ kubectl get all -n ezdelivery
+NAME                            READY   STATUS    RESTARTS   AGE
+pod/alarm-c8889cb8c-wvbpf       2/2     Running   0          4h13m
+pod/delivery-695b86f4d7-tjwn7   2/2     Running   0          168m
+pod/gateway-75744d64c9-9pd96    2/2     Running   0          95m
+pod/mypage-85757d849d-7mw9v     2/2     Running   0          133m
+pod/order-69b7cc6bf4-dms5r      2/2     Running   0          30m
+pod/payment-57f7cc657f-vw9vz    2/2     Running   0          4h57m
+pod/siege                       1/1     Running   0          8h
+pod/store-7986b6c9db-smcwz      1/1     Running   0          8h
+
+NAME               TYPE           CLUSTER-IP       EXTERNAL-IP                                                                  PORT(S)          AGE
+service/alarm      ClusterIP      10.100.203.217   <none>                                                                       8080/TCP         4h13m
+service/delivery   ClusterIP      10.100.195.214   <none>                                                                       8080/TCP         168m
+service/gateway    LoadBalancer   10.100.217.245   afaa345f3143649e4aa9fdf6a7196098-11992356.eu-central-1.elb.amazonaws.com     8080:32240/TCP   95m
+service/mypage     ClusterIP      10.100.227.33    <none>                                                                       8080/TCP         133m
+service/order      ClusterIP      10.100.27.43     <none>                                                                       8080/TCP         30m
+service/payment    ClusterIP      10.100.170.105   <none>                                                                       8080/TCP         4h57m
+service/store      LoadBalancer   10.100.72.169    a8246f41e86b64ea9932f056caa8c02c-1581443906.eu-central-1.elb.amazonaws.com   8080:31800/TCP   8h
+
+NAME                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/alarm      1/1     1            1           4h13m
+deployment.apps/delivery   1/1     1            1           168m
+deployment.apps/gateway    1/1     1            1           95m
+deployment.apps/mypage     1/1     1            1           133m
+deployment.apps/order      1/1     1            1           30m
+deployment.apps/payment    1/1     1            1           4h57m
+deployment.apps/store      1/1     1            1           8h
+
+NAME                                  DESIRED   CURRENT   READY   AGE
+replicaset.apps/alarm-c8889cb8c       1         1         1       4h13m
+replicaset.apps/delivery-695b86f4d7   1         1         1       168m
+replicaset.apps/gateway-75744d64c9    1         1         1       95m
+replicaset.apps/mypage-85757d849d     1         1         1       133m
+replicaset.apps/order-69b7cc6bf4      1         1         1       30m
+replicaset.apps/payment-57f7cc657f    1         1         1       4h57m
+replicaset.apps/store-7986b6c9db      1         1         1       8h
+	
 ```
 ## CI/CD 설정
 
