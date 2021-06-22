@@ -714,7 +714,7 @@ $ kubectl get all
 
 * ECR 인증
 ```
-$ aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin 740569282574.dkr.ecr.eu-central-1.amazonaws.com
+$ docker login --username AWS $(aws ecr get-login-password --region eu-central-1) 740569282574.dkr.ecr.eu-central-1.amazonaws.com
 ```
 
 * Metric Server 설치
