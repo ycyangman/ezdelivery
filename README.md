@@ -969,6 +969,10 @@ $ kubectl apply -f dr-pay.yaml
 ```
 DestinationRule 적용되어 서킷 브레이킹 동작 확인 (kiali 화면)
 
+```
+kubectl get all -n istio-system
+```
+
 ![서킷브레이커](https://user-images.githubusercontent.com/14067833/122865602-a052c700-d361-11eb-8da5-8fc9ca94f8d6.PNG)
 
 
