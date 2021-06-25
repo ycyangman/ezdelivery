@@ -514,9 +514,10 @@ http localhost:8080/orders/1
 
 ## 폴리글랏 퍼시스턴스
 
-각 마이크로서비스의 특성에 따라 데이터 저장소를 RDB, DocumentDB/NoSQL 등 다양하게 사용할 수 있지만, 시간적/환경적 특성상 모두 H2 메모리DB를 적용하였다.
+각 마이크로서비스의 특성에 따라 데이터 저장소를 RDB, DocumentDB/NoSQL 등 다양하게 사용할 수 있다.
+H2 메모리DB를 적용하였다.
 
-각 마이크로서비스의 특성에 따라 다양한 프로그래밍 언어를 사용하여 구현할 수 있지만, 시간적/환경적 특성상 Java를 이용하여 구현하였다.
+각 마이크로서비스의 특성에 따라 다양한 프로그래밍 언어를 사용하여 구현할 수 있지만, Java를 이용하여 구현하였다.
 
 ## 동기식 호출 과 Fallback 처리
 
@@ -1262,7 +1263,10 @@ Concurrency:		      96.02
 * 먼저 무정지 재배포가 100% 되는 것인지 확인하기 위해서 Autoscaler 이나 CB 설정을 제거함(위의 시나리오에서 제거되었음)
 
 - seige 로 배포작업 직전에 워크로드를 모니터링 함.
+
 ```shell
+$ kubectl exec -it siege -- /bin/bash
+$ siege -c1 -t60S http://delivery:8080/deliveries -v
 $ siege -c100 -t120S -r10 --content-type "application/json" 'http://payment:8080/payments POST {"storeName": "yogiyo"}'
 
 ** SIEGE 4.0.5
@@ -1312,7 +1316,7 @@ Concurrency:		       96.02
 
 ![3  readiness 설정](https://user-images.githubusercontent.com/14067833/122872719-ce3d0900-d36b-11eb-9ea4-29530fc4fd73.PNG)
 
-- 버전업 후 배포를 한다.
+- readinessProbe 를 설정하고 배포 진행
 
 ![4  버전업배포](https://user-images.githubusercontent.com/14067833/122872813-f0cf2200-d36b-11eb-989d-43eca122cfb4.PNG)
 
