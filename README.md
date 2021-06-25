@@ -1285,10 +1285,6 @@ HTTP/1.1 201     0.70 secs:     207 bytes ==> POST http://payment:8080/payments
 :
 ```
 
-
-
-### 컨테이너 이미지 Update (readness, liveness 미설정 상태)
-
 - Readness probe 미설정 상태 후 적용
 
 ![1  readiness probe 미설정상태](https://user-images.githubusercontent.com/14067833/122872527-8918d700-d36b-11eb-8c6d-0b88c6547540.PNG)
@@ -1335,6 +1331,25 @@ $ kubectl apply -f delivery.yaml
 ![5 payment java 버전업 배포후에도 seige availablity 100프로 유지](https://user-images.githubusercontent.com/14067833/122872953-28d66500-d36c-11eb-852c-52a2a23a639d.PNG)
 
 - 배포기간 동안 Availability 가 변화없기 때문에 무정지 재배포가 성공한 것으로 확인됨.
+
+# Self-healing (Liveness Probe)
+컨테이너가 기동 된후 initialDelaySecond에 설정된 값 만큼 대기를 했다가 periodSecond 에 정해진 주기 단위로 컨테이너의 헬스 체크를 한다. 
+initialDelaySecond를 주는 이유는, 컨테이너가 기동 되면서 애플리케이션이 기동될텐데, 설정 정보나 각종 초기화 작업이 필요하기 때문에, 컨테이너가 기동되자 마자 헬스 체크를 하게 되면, 서비스할 준비가 되지 않았기 때문에 헬스 체크에 실패할 수 있기 때문에, 준비 기간을 주는 것이다. 
+준비 시간이 끝나면, periodSecond에 정의된 주기에 따라 헬스 체크를 진행하게 된다.
+
+이번 세션에서는, 특정 API 를 호출시 어플리케이션의 메모리 과부화를 발생시켜 서비스가 동작안하는 상황을 만든다.
+그 후 livenessProbe 설정에 의하여 자동으로 서비스가 재시작 되는 실습을 한다.
+
+
+D:\MSA\workspace\mydelivery\delivery\kubernetes>kubectl get po -w
+NAME                        READY   STATUS    RESTARTS   AGE
+delivery-77f96544dd-s6xmf   1/1     Running   0          59s
+gateway-5fb586d4c8-v4grt    1/1     Running   0          5h11m
+siege                       1/1     Running   5          6d2h
+store-5d7c4d4497-jls6d      1/1     Running   0          5h14m
+delivery-77f96544dd-s6xmf   0/1     Error     0          102s
+delivery-77f96544dd-s6xmf   0/1     Running   1          106s
+delivery-77f96544dd-s6xmf   1/1     Running   1          119s
 
 #  ConfigMap 사용
 --시스템별로 또는 운영중에 동적으로 변경 가능성이 있는 설정들을 ConfigMap을 사용하여 관리합니다.
