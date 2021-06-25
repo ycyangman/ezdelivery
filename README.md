@@ -1261,11 +1261,16 @@ Concurrency:		      96.02
 ## 무정지 재배포
 
 * 먼저 무정지 재배포가 100% 되는 것인지 확인하기 위해서 Autoscaler 이나 CB 설정을 제거함(위의 시나리오에서 제거되었음)
+컨테이너의 상태 체크중에 서비스 기동시 Configuration을 로딩하거나, 많은 데이타를 로딩하거나, 
+외부 서비스를 호출하는 경우에는 일시적으로 서비스가 불가능한 상태가 될 수 있다.
+이런 경우에는 Readiness httpGet Probe를 설정(현재기준)하여 
+HTTP GET으로 readiness URL로 5초마다 호출을 해서 HTTP 응답 200을 받으면 해당 컨테이너를 정상으로 판단하고
+200~300 범위를 벗어난 응답 코드를 받으면 비정상으로 판단한다.
 
 - seige 로 배포작업 직전에 워크로드를 모니터링 함.
 
 ```shell
-$ kubectl exec -it siege -- /bin/bash
+$ kubectl exec -it siege -n ezdelivery -- /bin/bash
 $ siege -c1 -t60S http://delivery:8080/deliveries -v
 $ siege -c100 -t120S -r10 --content-type "application/json" 'http://payment:8080/payments POST {"storeName": "yogiyo"}'
 
@@ -1289,12 +1294,13 @@ HTTP/1.1 201     0.70 secs:     207 bytes ==> POST http://payment:8080/payments
 ![1  readiness probe 미설정상태](https://user-images.githubusercontent.com/14067833/122872527-8918d700-d36b-11eb-8c6d-0b88c6547540.PNG)
 
 ```shell
-$ kubectl apply -f payment.yaml
+$ kubectl apply -f delivery-na.yaml
 ```
 
-- seige 의 화면으로 넘어가서 payment에 부하를 준다.
+- seige 의 화면으로 넘어가서 delivery 에 부하를 준다.
 
 ```shell
+$ siege -c1 -t60S http://delivery:8080/deliveries -v
 # siege -c10 -t60s -r10 --content-type "application/json" 'http://payment:8080/payments POST {"storeName": "yogiyo"}' -v
 ```
 
@@ -1313,6 +1319,10 @@ Concurrency:		       96.02
 
 - 배포기간중 Availability 가 평소 100%에서 70% 대로 떨어지는 것을 확인. 원인은 쿠버네티스가 성급하게 새로 올려진 서비스를 READY 상태로 인식하여 서비스 유입을 진행한 것이기 때문. 이를 막기위해 Readiness Probe 를 설정함:
 - readiness 설정
+
+```shell
+$ kubectl apply -f delivery.yaml
+```
 
 ![3  readiness 설정](https://user-images.githubusercontent.com/14067833/122872719-ce3d0900-d36b-11eb-9ea4-29530fc4fd73.PNG)
 
